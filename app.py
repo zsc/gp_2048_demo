@@ -1,5 +1,6 @@
 # app.py
 import os
+import random
 import json
 import threading
 from datetime import datetime
@@ -109,8 +110,10 @@ def training_wrapper(params: dict, sid: str):
             
             # Evaluate fitness in parallel
             socketio.emit('training_update', {'log': "Evaluating fitness..."}, to=sid)
-            # We cannot easily show a progress bar here, so we just wait.
-            results = list(engine.pool.imap(engine._evaluate_fitness, engine.population))
+            # We cannot easily show a progress bar here, so we just wait. The arguments
+            # must be prepared for the top-level evaluate_fitness_worker function.
+            eval_args = [(p, engine.games_per_individual) for p in engine.population]
+            results = list(engine.pool.imap(evaluate_fitness_worker, eval_args))
             engine.population = results
             
             engine.population.sort(key=lambda p: p.fitness, reverse=True)

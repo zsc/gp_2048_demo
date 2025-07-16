@@ -316,6 +316,10 @@ class GPEngine:
     def _crossover(self, p1: Program, p2: Program) -> Tuple[Program, Program]:
         """Performs subtree crossover between two parent programs."""
         c1_nodes, c2_nodes = list(p1.nodes), list(p2.nodes)
+
+        # If either parent is too small to have a non-root subtree, abort crossover.
+        if len(c1_nodes) <= 1 or len(c2_nodes) <= 1:
+            return p1, p2
         
         # Select crossover point in parent 1
         pt1 = random.randint(1, len(c1_nodes) - 1)
