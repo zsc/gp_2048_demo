@@ -338,6 +338,32 @@ class GPEngine:
 
         return c1, c2
 
+    def _get_depth_of_node(self, nodes: List[GPNode], target_index: int) -> int:
+        """Calculates the depth of a node at a specific index in a prefix list."""
+        if target_index == 0:
+            return 0
+
+        depth = 0
+        # A stack tracking the number of remaining children for parent nodes.
+        children_counts = []
+
+        i = 0
+        while i < target_index:
+            node = nodes[i]
+
+            if children_counts:
+                children_counts[-1] -= 1
+
+            if node.arity > 0:
+                depth += 1
+                children_counts.append(node.arity)
+
+            while children_counts and children_counts[-1] == 0:
+                children_counts.pop()
+                depth -= 1
+            i += 1
+        return depth
+
     def _mutate(self, program: Program) -> Program:
         """Performs subtree mutation on a program."""
         nodes = list(program.nodes)
@@ -346,8 +372,8 @@ class GPEngine:
         end = self._find_subtree_end(nodes, pt)
         
         # Create a new random subtree
-        current_depth = str(Program(nodes[:pt])).count('(')
-        new_subtree = self._grow(max_depth=self.max_depth - current_depth)
+        current_depth = self._get_depth_of_node(nodes, pt)
+        new_subtree = self._grow(max_depth=self.max_depth - current_depth, current_depth=0)
         
         mutated_nodes = nodes[:pt] + new_subtree + nodes[end:]
         
@@ -436,6 +462,11 @@ class TestGPEngine(unittest.TestCase):
         self.engine = GPEngine(population_size=10, generations=2, max_init_depth=3)
         Game2048._init_tables() # Ensure game tables are ready
 
+    def tearDown(self):
+        """Clean up resources after tests."""
+        self.engine.pool.close()
+        self.engine.pool.join()
+
     def test_node_evaluation(self):
         # Test ADD(Constant(5), MUL(Constant(2), Constant(3))) -> 5 + (2*3) = 11
         add_node = Add()
@@ -489,23 +520,27 @@ class TestGPEngine(unittest.TestCase):
         p1 = Program([Add(), NumEmptyCells(), MaxTileValue()]) # ADD(EMPTY, MAX_TILE)
         p2 = Program([Sub(), MonotonicityScore(), SmoothnessScore()]) # SUB(MONO, SMOOTH)
         
-        # Manually swap the second child of p1 with the first child of p2
-        # Mock random to be predictable
-        random.randint = lambda a, b: 2 if b > 1 else 1 # Choose 2nd child of p1, 1st of p2
+        # Mock random to be predictable.
+        # The lambda will return 2 for `randint(1,2)` which is the range for both parents.
+        random.randint = lambda a, b: 2 if b > 1 else 1
         
         c1, c2 = self.engine._crossover(p1, p2)
         
-        # Expected c1: ADD(EMPTY, MONO) -> [Add, NumEmptyCells, MonotonicityScore]
+        # The mock selects index 2 for both parents. This swaps p1's MaxTileValue with p2's SmoothnessScore.
+        # c1 becomes ADD(EMPTY, SMOOTH)
+        # c2 becomes SUB(MONO, MAX_TILE)
+        
+        # Expected c1: [Add, NumEmptyCells, SmoothnessScore]
         self.assertEqual(len(c1.nodes), 3)
         self.assertIsInstance(c1.nodes[0], Add)
         self.assertIsInstance(c1.nodes[1], NumEmptyCells)
-        self.assertIsInstance(c1.nodes[2], MonotonicityScore)
+        self.assertIsInstance(c1.nodes[2], SmoothnessScore)
         
-        # Expected c2: SUB(MAX_TILE, SMOOTH) -> [Sub, MaxTileValue, SmoothnessScore]
+        # Expected c2: [Sub, MonotonicityScore, MaxTileValue]
         self.assertEqual(len(c2.nodes), 3)
         self.assertIsInstance(c2.nodes[0], Sub)
-        self.assertIsInstance(c2.nodes[1], MaxTileValue)
-        self.assertIsInstance(c2.nodes[2], SmoothnessScore)
+        self.assertIsInstance(c2.nodes[1], MonotonicityScore)
+        self.assertIsInstance(c2.nodes[2], MaxTileValue)
 
     def test_mutation(self):
         p = Program([Add(), NumEmptyCells(), MaxTileValue()])
