@@ -237,7 +237,73 @@ def handle_stop_training():
 def handle_new_game():
     """Provides a new 2048 board."""
     board_int = Game2048.reset_board()
-    emit('new_game_state', {'board': str(board_int), 'score': 0, 'max_tile': 0, 'is_over': False})
+    emit('new_game_state', {'board': str(board_int), 'score': 0, 'max_tile': Game2048.get_max_tile(board_int), 'is_over': False})
+
+# --- Expectimax AI Logic ---
+
+def max_value(board: int, program: Program, depth: int) -> float:
+    """Player's turn: maximize the score from the next state."""
+    if Game2048.is_game_over(board):
+        return program.eval(board) - 1e6 # Penalize game over states
+    if depth == 0:
+        return program.eval(board)
+
+    move_fns = {
+        0: Game2048.move_up, 1: Game2048.move_down,
+        2: Game2048.move_left, 3: Game2048.move_right
+    }
+
+    max_utility = -float('inf')
+    has_moved = False
+    for _, move_fn in move_fns.items():
+        next_board, _, moved = move_fn(board)
+        if moved:
+            has_moved = True
+            # After player moves, it's the computer's turn (chance node)
+            utility = expect_value(next_board, program, depth)
+            max_utility = max(max_utility, utility)
+
+    if not has_moved:
+        return program.eval(board)
+
+    return max_utility
+
+def expect_value(board: int, program: Program, depth: int) -> float:
+    """Computer's turn: calculate the expected score from all possible tile spawns."""
+    empty_cells_indices = []
+    for i in range(16):
+        if (board >> (i * 4)) & 0xF == 0:
+            empty_cells_indices.append(i)
+
+    # After computer adds a tile, it's player's turn again, so we search 1 ply deeper.
+    next_depth = depth - 1
+
+    if not empty_cells_indices:
+        return max_value(board, program, next_depth)
+
+    if next_depth < 0:
+        return program.eval(board)
+
+    num_empty = len(empty_cells_indices)
+    total_score = 0.0
+
+    # Weighted average of scores for adding '2' or '4'
+    # val_2 is log2(2)=1, val_4 is log2(4)=2
+    sum_score_2 = 0.0
+    sum_score_4 = 0.0
+
+    for cell_idx in empty_cells_indices:
+        board_with_2 = board | (1 << (cell_idx * 4))
+        sum_score_2 += max_value(board_with_2, program, next_depth)
+
+        board_with_4 = board | (2 << (cell_idx * 4))
+        sum_score_4 += max_value(board_with_4, program, next_depth)
+
+    # Expected score = (0.9 * sum(scores_with_2) + 0.1 * sum(scores_with_4)) / num_empty
+    # This simplifies to:
+    # (0.9/num_empty) * sum(scores_with_2) + (0.1/num_empty) * sum(scores_with_4)
+    # Which is what the loop does implicitly if we divide at the end
+    return (0.9 * sum_score_2 + 0.1 * sum_score_4) / num_empty
 
 @socketio.on('request_next_move')
 def handle_next_move(data):
@@ -247,26 +313,25 @@ def handle_next_move(data):
     try:
         model_file = data['model']
         board_int = int(data['board'])
+        search_depth = int(data.get('search_depth', 2)) # Get depth from request
         
         with open(os.path.join(MODELS_DIR, model_file), 'r') as f:
             program = deserialize_program(f.read())
             
         move_fns = {
-            0: Game2048.move_up, 
-            1: Game2048.move_down, 
-            2: Game2048.move_left, 
-            3: Game2048.move_right
+            0: Game2048.move_up, 1: Game2048.move_down,
+            2: Game2048.move_left, 3: Game2048.move_right
         }
         
         best_move_idx = -1
         best_eval_score = -float('inf')
         
-        possible_moves = []
+        # This is the root of the search, corresponding to a MAX node.
         for i, move_fn in move_fns.items():
             next_board, _, moved = move_fn(board_int)
             if moved:
-                eval_score = program.eval(next_board)
-                possible_moves.append({'move': i, 'score': eval_score})
+                # The value of making a move is the expected value of the resulting state
+                eval_score = expect_value(next_board, program, search_depth)
                 if eval_score > best_eval_score:
                     best_eval_score = eval_score
                     best_move_idx = i
@@ -277,14 +342,7 @@ def handle_next_move(data):
             new_board_with_tile = Game2048.add_random_tile(new_board)
             is_over = Game2048.is_game_over(new_board_with_tile)
             max_tile = Game2048.get_max_tile(new_board_with_tile)
-            
-            emit('next_move_result', {
-                'move': best_move_idx,
-                'score_gain': score_gain,
-                'new_board': str(new_board_with_tile),
-                'is_over': is_over,
-                'max_tile': max_tile
-            })
+            emit('next_move_result', { 'move': best_move_idx, 'score_gain': score_gain, 'new_board': str(new_board_with_tile), 'is_over': is_over, 'max_tile': max_tile })
         else:
             # Game is over, no moves possible
             emit('next_move_result', {'move': -1, 'is_over': True})

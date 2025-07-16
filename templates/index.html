@@ -95,6 +95,10 @@
                         <select id="model-selector"></select>
                         <button id="refresh-models-btn" style="margin-top: 5px;">Refresh List</button>
                     </div>
+                    <div class="form-group">
+                        <label for="search-depth">Expectimax Search Depth:</label>
+                        <input id="search-depth" type="number" value="2" min="1" max="5">
+                    </div>
                     <button id="new-game-btn">New Game</button>
                     <button id="ai-play-btn" disabled>Let AI Play</button>
                     <button id="ai-stop-btn" disabled style="display: none; background-color: #dc3545;">Stop AI</button>
@@ -180,29 +184,37 @@
             const aiPlayBtn = document.getElementById('ai-play-btn');
             const aiStopBtn = document.getElementById('ai-stop-btn');
             const boardContainer = document.getElementById('board-container');
+            const searchDepthInput = document.getElementById('search-depth');
             const gameScoreEl = document.getElementById('game-score');
             const gameMaxTileEl = document.getElementById('game-max-tile');
 
             function int64ToBoardArray(boardInt) {
                 const board = Array(4).fill(0).map(() => Array(4).fill(0));
-                for (let i = 0; i < 16; i++) {
-                    const valLog2 = (boardInt >> BigInt(i * 4)) & BigInt(0xF);
-                    if (valLog2 > 0) {
-                        board[Math.floor(i / 4)][i % 4] = 1 << Number(valLog2);
+                try {
+                    for (let i = 0; i < 16; i++) {
+                        const valLog2 = (boardInt >> BigInt(i * 4)) & BigInt(0xF);
+                        if (valLog2 > 0) {
+                            board[Math.floor(i / 4)][i % 4] = 1 << Number(valLog2);
+                        }
                     }
+                } catch (e) {
+                    console.error("Error converting board state:", e);
                 }
                 return board;
             }
 
             function renderBoard(boardArray) {
                 boardContainer.innerHTML = ''; // Clear previous state
+                const fragment = document.createDocumentFragment();
                 for (let r = 0; r < 4; r++) {
                     for (let c = 0; c < 4; c++) {
                         const cell = document.createElement('div');
                         const tileValue = boardArray[r][c];
                         if (tileValue > 0) {
+                            // Use a more robust class naming for large tiles
+                            const tileClassValue = tileValue <= 2048 ? tileValue : 'super';
                             cell.className = 'tile';
-                            cell.classList.add(`tile-${tileValue <= 2048 ? tileValue : 'super'}`);
+                            cell.classList.add(`tile-${tileClassValue}`);
                             cell.textContent = tileValue;
                         } else {
                             cell.className = 'grid-cell';
@@ -210,6 +222,7 @@
                         boardContainer.appendChild(cell);
                     }
                 }
+                boardContainer.appendChild(fragment);
             }
 
             async function fetchModels() {
@@ -230,6 +243,8 @@
 
             function updateButtonStates() {
                 const modelSelected = modelSelector.value !== "";
+                const depthValid = searchDepthInput && parseInt(searchDepthInput.value, 10) > 0;
+
                 if (isAIPlaying) {
                     aiPlayBtn.disabled = true;
                     aiStopBtn.disabled = false;
@@ -237,13 +252,15 @@
                     newGameBtn.disabled = true;
                     modelSelector.disabled = true;
                     refreshModelsBtn.disabled = true;
+                    searchDepthInput.disabled = true;
                 } else {
-                    aiPlayBtn.disabled = isGameOver || !modelSelected;
+                    aiPlayBtn.disabled = isGameOver || !modelSelected || !depthValid;
                     aiStopBtn.disabled = true;
                     aiStopBtn.style.display = 'none';
                     newGameBtn.disabled = false;
                     modelSelector.disabled = false;
                     refreshModelsBtn.disabled = false;
+                    searchDepthInput.disabled = false;
                 }
             }
 
@@ -255,7 +272,8 @@
                 }
                 socket.emit('request_next_move', {
                     board: currentBoardInt.toString(),
-                    model: modelSelector.value
+                    model: modelSelector.value,
+                    search_depth: parseInt(searchDepthInput.value, 10) || 2
                 });
             }
 
@@ -280,6 +298,7 @@
             modelSelector.addEventListener('change', () => {
                 updateButtonStates();
             });
+            searchDepthInput.addEventListener('input', updateButtonStates);
             
             refreshModelsBtn.addEventListener('click', fetchModels);
 
@@ -287,15 +306,18 @@
                 currentBoardInt = BigInt(data.board);
                 currentScore = data.score;
                 isGameOver = data.is_over;
-                const boardArray = int64ToBoardArray(currentBoardInt);
-                renderBoard(boardArray);
-                gameScoreEl.textContent = currentScore;
-                gameMaxTileEl.textContent = data.max_tile;
-                updateButtonStates();
+                // Defer DOM updates to avoid blocking
+                requestAnimationFrame(() => {
+                    const boardArray = int64ToBoardArray(currentBoardInt);
+                    renderBoard(boardArray);
+                    gameScoreEl.textContent = currentScore;
+                    gameMaxTileEl.textContent = data.max_tile;
+                    updateButtonStates();
+                });
             });
 
             socket.on('next_move_result', (data) => {
-                currentBoardInt = BigInt(data.new_board);
+                if (data.new_board) currentBoardInt = BigInt(data.new_board);
                 currentScore += data.score_gain;
                 isGameOver = data.is_over || data.move === -1;
                 const boardArray = int64ToBoardArray(currentBoardInt);
@@ -320,7 +342,8 @@
             socket.on('error', (data) => {
                 console.error('Server error:', data.message);
                 alert(`An error occurred on the server: ${data.message}`);
-                aiStepBtn.disabled = false;
+                isAIPlaying = false;
+                updateButtonStates();
             });
 
             // Initial setup
