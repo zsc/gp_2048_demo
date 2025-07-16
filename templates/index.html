@@ -96,7 +96,8 @@
                         <button id="refresh-models-btn" style="margin-top: 5px;">Refresh List</button>
                     </div>
                     <button id="new-game-btn">New Game</button>
-                    <button id="ai-step-btn" disabled>Let AI Play (Step)</button>
+                    <button id="ai-play-btn" disabled>Let AI Play</button>
+                    <button id="ai-stop-btn" disabled style="display: none; background-color: #dc3545;">Stop AI</button>
                 </div>
             </div>
         </div>
@@ -108,6 +109,8 @@
             const socket = io();
             let currentBoardInt = BigInt(0);
             let currentScore = 0;
+            let isAIPlaying = false;
+            let isGameOver = true;
 
             // --- General UI ---
             function openTab(evt, tabName) {
@@ -174,7 +177,8 @@
             const modelSelector = document.getElementById('model-selector');
             const refreshModelsBtn = document.getElementById('refresh-models-btn');
             const newGameBtn = document.getElementById('new-game-btn');
-            const aiStepBtn = document.getElementById('ai-step-btn');
+            const aiPlayBtn = document.getElementById('ai-play-btn');
+            const aiStopBtn = document.getElementById('ai-stop-btn');
             const boardContainer = document.getElementById('board-container');
             const gameScoreEl = document.getElementById('game-score');
             const gameMaxTileEl = document.getElementById('game-max-tile');
@@ -224,23 +228,57 @@
                 }
             }
 
-            newGameBtn.addEventListener('click', () => {
-                socket.emit('request_new_game');
-                aiStepBtn.disabled = (modelSelector.value === "");
+            function updateButtonStates() {
+                const modelSelected = modelSelector.value !== "";
+                if (isAIPlaying) {
+                    aiPlayBtn.disabled = true;
+                    aiStopBtn.disabled = false;
+                    aiStopBtn.style.display = 'inline-block';
+                    newGameBtn.disabled = true;
+                    modelSelector.disabled = true;
+                    refreshModelsBtn.disabled = true;
+                } else {
+                    aiPlayBtn.disabled = isGameOver || !modelSelected;
+                    aiStopBtn.disabled = true;
+                    aiStopBtn.style.display = 'none';
+                    newGameBtn.disabled = false;
+                    modelSelector.disabled = false;
+                    refreshModelsBtn.disabled = false;
+                }
+            }
+
+            function requestNextAIMove() {
+                if (!isAIPlaying || isGameOver) {
+                    isAIPlaying = false;
+                    updateButtonStates();
+                    return;
+                }
+                socket.emit('request_next_move', {
+                    board: currentBoardInt.toString(),
+                    model: modelSelector.value
+                });
+            }
+
+            aiPlayBtn.addEventListener('click', () => {
+                if (!isGameOver && modelSelector.value) {
+                    isAIPlaying = true;
+                    updateButtonStates();
+                    requestNextAIMove();
+                }
             });
             
-            modelSelector.addEventListener('change', () => {
-                aiStepBtn.disabled = (modelSelector.value === "" || currentScore < 0);
+            aiStopBtn.addEventListener('click', () => {
+                isAIPlaying = false;
+                updateButtonStates();
             });
 
-            aiStepBtn.addEventListener('click', () => {
-                if (modelSelector.value && currentBoardInt > 0) {
-                    aiStepBtn.disabled = true; // Prevent spamming
-                    socket.emit('request_next_move', {
-                        board: currentBoardInt.toString(),
-                        model: modelSelector.value
-                    });
-                }
+            newGameBtn.addEventListener('click', () => {
+                isAIPlaying = false; // Stop any ongoing play
+                socket.emit('request_new_game');
+            });
+
+            modelSelector.addEventListener('change', () => {
+                updateButtonStates();
             });
             
             refreshModelsBtn.addEventListener('click', fetchModels);
@@ -248,29 +286,35 @@
             socket.on('new_game_state', (data) => {
                 currentBoardInt = BigInt(data.board);
                 currentScore = data.score;
+                isGameOver = data.is_over;
                 const boardArray = int64ToBoardArray(currentBoardInt);
                 renderBoard(boardArray);
                 gameScoreEl.textContent = currentScore;
                 gameMaxTileEl.textContent = data.max_tile;
-                if (data.is_over) {
-                    aiStepBtn.disabled = true;
-                    alert('Game Over!');
-                }
+                updateButtonStates();
             });
 
             socket.on('next_move_result', (data) => {
-                if (data.move === -1 || data.is_over) {
-                    aiStepBtn.disabled = true;
-                    alert('Game Over! The AI cannot make any more moves.');
-                    return;
-                }
                 currentBoardInt = BigInt(data.new_board);
                 currentScore += data.score_gain;
+                isGameOver = data.is_over || data.move === -1;
                 const boardArray = int64ToBoardArray(currentBoardInt);
                 renderBoard(boardArray);
                 gameScoreEl.textContent = currentScore;
                 gameMaxTileEl.textContent = data.max_tile;
-                aiStepBtn.disabled = false; // Re-enable for next step
+
+                if (isGameOver) {
+                    isAIPlaying = false;
+                    updateButtonStates();
+                    alert('Game Over! The AI has finished playing.');
+                    return;
+                }
+
+                if (isAIPlaying) {
+                    setTimeout(requestNextAIMove, 50); // Loop with a small delay
+                } else {
+                    updateButtonStates(); // AI was stopped manually
+                }
             });
             
             socket.on('error', (data) => {
@@ -282,6 +326,7 @@
             // Initial setup
             fetchModels();
             renderBoard(Array(4).fill(0).map(() => Array(4).fill(0))); // Render empty board initially
+            updateButtonStates();
         });
     </script>
 </body>
