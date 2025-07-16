@@ -179,18 +179,69 @@ class Program:
 
         return node.eval(*child_vals), current_index
 
+# --- Expectimax Helpers for Fitness Evaluation ---
+# These are defined at the top level for multiprocessing compatibility.
+
+def _gp_max_value(board: int, program: Program, depth: int) -> float:
+    """Player's turn (MAX node)."""
+    if Game2048.is_game_over(board):
+        return program.eval(board) - 1e7 # Heavily penalize game over
+    if depth == 0:
+        return program.eval(board)
+
+    max_utility = -float('inf')
+    moved_at_all = False
+    for move_fn in [Game2048.move_up, Game2048.move_down, Game2048.move_left, Game2048.move_right]:
+        next_board, _, moved = move_fn(board)
+        if moved:
+            moved_at_all = True
+            utility = _gp_expect_value(next_board, program, depth)
+            if utility > max_utility:
+                max_utility = utility
+
+    if not moved_at_all:
+        return program.eval(board)
+
+    return max_utility
+
+def _gp_expect_value(board: int, program: Program, depth: int) -> float:
+    """Computer's turn (CHANCE node)."""
+    empty_cells_indices = []
+    for i in range(16):
+        if (board >> (i * 4)) & 0xF == 0:
+            empty_cells_indices.append(i)
+
+    if not empty_cells_indices:
+        return _gp_max_value(board, program, depth - 1)
+
+    num_empty = len(empty_cells_indices)
+    next_depth = depth - 1
+
+    if next_depth < 0:
+        return program.eval(board)
+
+    total_utility = 0.0
+    for cell_idx in empty_cells_indices:
+        # Probability 0.9 for tile 2 (log2 value 1)
+        board_with_2 = board | (1 << (cell_idx * 4))
+        total_utility += 0.9 * _gp_max_value(board_with_2, program, next_depth)
+
+        # Probability 0.1 for tile 4 (log2 value 2)
+        board_with_4 = board | (2 << (cell_idx * 4))
+        total_utility += 0.1 * _gp_max_value(board_with_4, program, next_depth)
+
+    return total_utility / num_empty
+
 # This is a top-level function to be used with multiprocessing.Pool
 # to avoid pickling errors with instance methods.
-def evaluate_fitness_worker(args: Tuple[Program, int]) -> Program:
+def evaluate_fitness_worker(args: Tuple[Program, int, int]) -> Program:
     """
-    Plays games to evaluate a program's fitness.
-    The strategy is to pick the move that results in the board with the highest score from the program's eval function.
+    Plays games to evaluate a program's fitness using Expectimax search.
     """
-    program, games_per_individual = args
+    program, games_per_individual, search_depth = args
     total_score = 0
     total_max_tile = 0
     total_moves = 0
-
     for _ in range(games_per_individual):
         board = Game2048.reset_board()
         game_score = 0
@@ -210,11 +261,20 @@ def evaluate_fitness_worker(args: Tuple[Program, int]) -> Program:
             if not possible_moves:
                 break # No valid moves, game over
             
-            for i, next_board in possible_moves:
-                eval_score = program.eval(next_board)
-                if eval_score > best_eval_score:
-                    best_eval_score = eval_score
-                    best_move = i
+            # Use Expectimax to find the best move
+            if search_depth > 0:
+                for i, next_board in possible_moves:
+                    # After our move, it's the computer's turn (expect node)
+                    eval_score = _gp_expect_value(next_board, program, search_depth)
+                    if eval_score > best_eval_score:
+                        best_eval_score = eval_score
+                        best_move = i
+            else: # Fallback to greedy (depth 0) if search_depth is 0 or less
+                for i, next_board in possible_moves:
+                    eval_score = program.eval(next_board)
+                    if eval_score > best_eval_score:
+                        best_eval_score = eval_score
+                        best_move = i
             
             if best_move != -1:
                 new_board, score_gain, _ = move_fns[best_move](board)
@@ -223,7 +283,6 @@ def evaluate_fitness_worker(args: Tuple[Program, int]) -> Program:
                 moves += 1
             else: # Should not happen if possible_moves is not empty
                 break
-
         total_score += game_score
         total_max_tile += Game2048.get_max_tile(board)
         total_moves += moves
@@ -251,6 +310,7 @@ class GPEngine:
                  max_depth: int = 8,
                  elitism_size: int = 1,
                  games_per_individual: int = 3,
+                 fitness_search_depth: int = 1,
                  log_dir: str = 'runs/gp_2048_demo'):
         
         self.population_size = population_size
@@ -262,6 +322,7 @@ class GPEngine:
         self.max_depth = max_depth
         self.elitism_size = elitism_size
         self.games_per_individual = games_per_individual
+        self.fitness_search_depth = fitness_search_depth
 
         self.functions: List[Function] = [Add(), Sub(), Mul(), SafeDiv(), IfLTE()]
         self.terminals: List[Terminal] = [NumEmptyCells(), MaxTileValue(), MonotonicityScore(), SmoothnessScore()]
@@ -400,8 +461,8 @@ class GPEngine:
             
             # Evaluate fitness in parallel
             print("Evaluating fitness...")
-            # We pass tuples of (program, games_per_individual) to the worker
-            eval_args = [(p, self.games_per_individual) for p in self.population]
+            # We pass tuples of (program, games_per_individual, search_depth) to the worker
+            eval_args = [(p, self.games_per_individual, self.fitness_search_depth) for p in self.population]
             results = list(tqdm(self.pool.imap(evaluate_fitness_worker, eval_args), total=self.population_size))
             self.population = results
 

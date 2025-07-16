@@ -92,6 +92,7 @@ def training_wrapper(params: dict, sid: str):
             max_depth=int(params['max_depth']),
             elitism_size=int(params['elitism_size']),
             games_per_individual=int(params['games_per_individual']),
+            fitness_search_depth=int(params['fitness_search_depth']),
             log_dir=log_dir
         )
         socketio.emit('training_update', {'log': f"TensorBoard log directory: {log_dir}"}, to=sid)
@@ -112,7 +113,7 @@ def training_wrapper(params: dict, sid: str):
             socketio.emit('training_update', {'log': "Evaluating fitness..."}, to=sid)
             # We cannot easily show a progress bar here, so we just wait. The arguments
             # must be prepared for the top-level evaluate_fitness_worker function.
-            eval_args = [(p, engine.games_per_individual) for p in engine.population]
+            eval_args = [(p, engine.games_per_individual, engine.fitness_search_depth) for p in engine.population]
             results = list(engine.pool.imap(evaluate_fitness_worker, eval_args))
             engine.population = results
             
