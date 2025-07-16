@@ -1,4 +1,4 @@
-# gp_2048_demo/gp_engine.py
+# gp_engine.py
 
 import random
 import copy
@@ -179,6 +179,64 @@ class Program:
 
         return node.eval(*child_vals), current_index
 
+# This is a top-level function to be used with multiprocessing.Pool
+# to avoid pickling errors with instance methods.
+def evaluate_fitness_worker(args: Tuple[Program, int]) -> Program:
+    """
+    Plays games to evaluate a program's fitness.
+    The strategy is to pick the move that results in the board with the highest score from the program's eval function.
+    """
+    program, games_per_individual = args
+    total_score = 0
+    total_max_tile = 0
+    total_moves = 0
+
+    for _ in range(games_per_individual):
+        board = Game2048.reset_board()
+        game_score = 0
+        moves = 0
+        
+        while not Game2048.is_game_over(board):
+            move_fns = [Game2048.move_up, Game2048.move_down, Game2048.move_left, Game2048.move_right]
+            best_move = -1
+            best_eval_score = -float('inf')
+
+            possible_moves = []
+            for i, move_fn in enumerate(move_fns):
+                next_board, _, moved = move_fn(board)
+                if moved:
+                    possible_moves.append((i, next_board))
+            
+            if not possible_moves:
+                break # No valid moves, game over
+            
+            for i, next_board in possible_moves:
+                eval_score = program.eval(next_board)
+                if eval_score > best_eval_score:
+                    best_eval_score = eval_score
+                    best_move = i
+            
+            if best_move != -1:
+                new_board, score_gain, _ = move_fns[best_move](board)
+                board = Game2048.add_random_tile(new_board)
+                game_score += score_gain
+                moves += 1
+            else: # Should not happen if possible_moves is not empty
+                break
+
+        total_score += game_score
+        total_max_tile += Game2048.get_max_tile(board)
+        total_moves += moves
+
+    avg_score = total_score / games_per_individual
+    avg_max_tile = total_max_tile / games_per_individual
+    
+    # Fitness is a combination of score and max tile
+    program.fitness = avg_score + (avg_max_tile ** 2)
+    program.game_score = avg_score
+    program.max_tile = avg_max_tile
+    return program
+
 # --- 4. The Main GP Engine ---
 
 class GPEngine:
@@ -238,61 +296,6 @@ class GPEngine:
     def _initialize_population(self):
         """Creates the initial population of random programs."""
         self.population = [self._create_random_program(self.max_init_depth) for _ in range(self.population_size)]
-
-    def _evaluate_fitness(self, program: Program) -> Program:
-        """
-        Plays games to evaluate a program's fitness.
-        The strategy is to pick the move that results in the board with the highest score from the program's eval function.
-        """
-        total_score = 0
-        total_max_tile = 0
-        total_moves = 0
-
-        for _ in range(self.games_per_individual):
-            board = Game2048.reset_board()
-            game_score = 0
-            moves = 0
-            
-            while not Game2048.is_game_over(board):
-                move_fns = [Game2048.move_up, Game2048.move_down, Game2048.move_left, Game2048.move_right]
-                best_move = -1
-                best_eval_score = -float('inf')
-
-                possible_moves = []
-                for i, move_fn in enumerate(move_fns):
-                    next_board, _, moved = move_fn(board)
-                    if moved:
-                        possible_moves.append((i, next_board))
-                
-                if not possible_moves:
-                    break # No valid moves, game over
-                
-                for i, next_board in possible_moves:
-                    eval_score = program.eval(next_board)
-                    if eval_score > best_eval_score:
-                        best_eval_score = eval_score
-                        best_move = i
-                
-                if best_move != -1:
-                    new_board, score_gain, _ = move_fns[best_move](board)
-                    board = Game2048.add_random_tile(new_board)
-                    game_score += score_gain
-                    moves += 1
-                else: # Should not happen if possible_moves is not empty
-                    break
-
-            total_score += game_score
-            total_max_tile += Game2048.get_max_tile(board)
-            total_moves += moves
-
-        avg_score = total_score / self.games_per_individual
-        avg_max_tile = total_max_tile / self.games_per_individual
-        
-        # Fitness is a combination of score and max tile
-        program.fitness = avg_score + (avg_max_tile ** 2)
-        program.game_score = avg_score
-        program.max_tile = avg_max_tile
-        return program
 
     def _tournament_selection(self) -> Program:
         """Selects an individual using tournament selection."""
@@ -393,7 +396,9 @@ class GPEngine:
             
             # Evaluate fitness in parallel
             print("Evaluating fitness...")
-            results = list(tqdm(self.pool.imap(self._evaluate_fitness, self.population), total=self.population_size))
+            # We pass tuples of (program, games_per_individual) to the worker
+            eval_args = [(p, self.games_per_individual) for p in self.population]
+            results = list(tqdm(self.pool.imap(evaluate_fitness_worker, eval_args), total=self.population_size))
             self.population = results
 
             # Sort by fitness (descending)
