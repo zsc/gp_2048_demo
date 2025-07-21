@@ -1,5 +1,18 @@
 open Gp_2048_lib.Game
 open Gp_2048_lib.Gp_tree
+open Domainslib
+
+(* Global domain pool - default to 6 cores *)
+let num_domains = ref 6
+let pool = ref None
+
+let get_pool () =
+  match !pool with
+  | Some p -> p
+  | None ->
+    let p = Task.setup_pool ~num_domains:!num_domains () in
+    pool := Some p;
+    p
 
 (* Node-limited expectimax search *)
 type search_control = {
@@ -100,23 +113,59 @@ let get_best_move_limited board program node_budget =
     (* Allocate nodes proportionally among valid moves *)
     let nodes_per_move = node_budget / List.length valid_moves in
     
-    let move_values = List.map (fun dir ->
-      let new_board = match dir with
-        | `Up -> move_up board
-        | `Down -> move_down board
-        | `Left -> move_left board
-        | `Right -> move_right board
-      in
-      
-      let control = { 
-        nodes_remaining = nodes_per_move; 
-        max_depth_reached = 0 
-      } in
-      
-      (* Start with high depth limit, will be constrained by nodes *)
-      let value = expect_value_limited new_board program 10 control in
-      (dir, value, control.max_depth_reached)
-    ) valid_moves in
+    (* Use parallel evaluation only if enough work per move *)
+    let move_values = 
+      if nodes_per_move >= 1000 && !num_domains > 1 then
+        (* Parallel evaluation of moves *)
+        let pool = get_pool () in
+        Task.run pool (fun () ->
+          (* Create array for results *)
+          let results = Array.make (List.length valid_moves) (List.hd valid_moves, neg_infinity, 0) in
+          let valid_moves_arr = Array.of_list valid_moves in
+          
+          (* Parallel evaluation using parallel_for *)
+          Task.parallel_for pool ~start:0 ~finish:(Array.length valid_moves_arr - 1) 
+            ~body:(fun i ->
+              let dir = valid_moves_arr.(i) in
+              let new_board = match dir with
+                | `Up -> move_up board
+                | `Down -> move_down board
+                | `Left -> move_left board
+                | `Right -> move_right board
+              in
+              
+              let control = { 
+                nodes_remaining = nodes_per_move; 
+                max_depth_reached = 0 
+              } in
+              
+              (* Start with high depth limit, will be constrained by nodes *)
+              let value = expect_value_limited new_board program 10 control in
+              results.(i) <- (dir, value, control.max_depth_reached)
+            );
+          
+          Array.to_list results
+        )
+      else
+        (* Sequential evaluation for small workloads *)
+        List.map (fun dir ->
+          let new_board = match dir with
+            | `Up -> move_up board
+            | `Down -> move_down board
+            | `Left -> move_left board
+            | `Right -> move_right board
+          in
+          
+          let control = { 
+            nodes_remaining = nodes_per_move; 
+            max_depth_reached = 0 
+          } in
+          
+          (* Start with high depth limit, will be constrained by nodes *)
+          let value = expect_value_limited new_board program 10 control in
+          (dir, value, control.max_depth_reached)
+        ) valid_moves
+    in
     
     let best_move = List.fold_left (fun (best_dir, best_val, _) (dir, value, depth) ->
       if value > best_val then (dir, value, depth) else (best_dir, best_val, depth)
@@ -126,7 +175,7 @@ let get_best_move_limited board program node_budget =
     | (dir, _, depth) -> Some (dir, depth)
 
 (* Run experiments with different node budgets *)
-let experiment_node_budgets () =
+let experiment_node_budgets ?(num_games=50) () =
   Printf.printf "=== Node-Limited Expectimax Experiments ===\n\n";
   flush stdout;
   
@@ -144,9 +193,15 @@ let experiment_node_budgets () =
   let node_budgets = [100; 500; 1000; 5000; 10000; 50000] in
   
   (* Create results file *)
-  let oc = open_out "node_limited_results.txt" in
-  Printf.fprintf oc "Node Budget | Avg Score | Max Score | Avg Max Tile | Games/sec | Avg Depth\n";
-  Printf.fprintf oc "------------|-----------|-----------|--------------|-----------|----------\n";
+  let filename = Printf.sprintf "node_limited_results_%dgames.txt" num_games in
+  let oc = open_out filename in
+  Printf.fprintf oc "# Node-Limited Expectimax Results (%d games per budget, %d cores)\n" num_games !num_domains;
+  let tm = Unix.localtime (Unix.time ()) in
+  Printf.fprintf oc "# Date: %04d-%02d-%02d %02d:%02d:%02d\n\n" 
+    (tm.tm_year + 1900) (tm.tm_mon + 1) tm.tm_mday
+    tm.tm_hour tm.tm_min tm.tm_sec;
+  Printf.fprintf oc "Node Budget | Avg Score | Std Dev | Max Score | Avg Max Tile | Games/sec | Avg Depth\n";
+  Printf.fprintf oc "------------|-----------|---------|-----------|--------------|-----------|----------\n";
   
   List.iter (fun budget ->
     Printf.printf "\nNode budget: %d\n" budget;
@@ -158,8 +213,8 @@ let experiment_node_budgets () =
     let total_depth = ref 0 in
     let depth_count = ref 0 in
     
-    (* Play 10 games *)
-    for game = 1 to 10 do
+    (* Play games sequentially for deterministic results *)
+    for game = 1 to num_games do
       let start_time = Unix.gettimeofday () in
       let board = ref 0x0000000000000000L in
       let score = ref 0 in
@@ -196,31 +251,42 @@ let experiment_node_budgets () =
       scores := !score :: !scores;
       max_tiles := max_tile :: !max_tiles;
       
-      Printf.printf "  Game %d: score=%d, max_tile=2^%d, time=%.1fs\n" 
-        game !score max_tile elapsed;
-      flush stdout
+      let print_interval = max 1 (num_games / 5) in
+      if game mod print_interval = 0 then begin
+        Printf.printf "  Game %d: score=%d, max_tile=2^%d, time=%.1fs\n" 
+          game !score max_tile elapsed;
+        flush stdout
+      end
     done;
     
     (* Calculate statistics *)
-    let avg_score = (List.fold_left (+) 0 !scores) / 10 in
+    let avg_score = (List.fold_left (+) 0 !scores) / num_games in
     let max_score = List.fold_left max 0 !scores in
-    let avg_max_tile = (List.fold_left (+) 0 !max_tiles) / 10 in
-    let games_per_sec = 10.0 /. !total_time in
+    let avg_max_tile = (List.fold_left (+) 0 !max_tiles) / num_games in
+    let games_per_sec = float_of_int num_games /. !total_time in
     let avg_depth = if !depth_count > 0 then float_of_int !total_depth /. float_of_int !depth_count else 0.0 in
     
-    Printf.printf "  Summary: avg_score=%d, max=%d, avg_tile=2^%d, speed=%.1f games/sec\n"
-      avg_score max_score avg_max_tile games_per_sec;
+    (* Calculate standard deviation *)
+    let avg_score_f = float_of_int avg_score in
+    let variance = (List.fold_left (fun acc score ->
+      let diff = float_of_int score -. avg_score_f in
+      acc +. diff *. diff
+    ) 0.0 !scores) /. float_of_int num_games in
+    let std_dev = sqrt variance in
     
-    Printf.fprintf oc "%11d | %9d | %9d | %12d | %9.1f | %8.1f\n"
-      budget avg_score max_score avg_max_tile games_per_sec avg_depth;
+    Printf.printf "  Summary: avg_score=%d±%.0f, max=%d, avg_tile=2^%d, speed=%.1f games/sec\n"
+      avg_score std_dev max_score avg_max_tile games_per_sec;
+    
+    Printf.fprintf oc "%11d | %9d | %7.0f | %9d | %12d | %9.1f | %8.1f\n"
+      budget avg_score std_dev max_score avg_max_tile games_per_sec avg_depth;
     flush oc
   ) node_budgets;
   
   close_out oc;
-  Printf.printf "\nResults saved to node_limited_results.txt\n"
+  Printf.printf "\nResults saved to %s\n" filename
 
 (* Test dynamic node allocation based on game state *)
-let experiment_dynamic_nodes () =
+let experiment_dynamic_nodes ?(num_games=20) () =
   Printf.printf "\n\n=== Dynamic Node Allocation Experiment ===\n";
   flush stdout;
   
@@ -248,7 +314,7 @@ let experiment_dynamic_nodes () =
     );
   ] in
   
-  Printf.printf "\nTesting different node allocation strategies (5 games each):\n";
+  Printf.printf "\nTesting different node allocation strategies (%d games each):\n" num_games;
   
   List.iter (fun (name, node_fn) ->
     Printf.printf "\nStrategy: %s\n" name;
@@ -258,7 +324,8 @@ let experiment_dynamic_nodes () =
     let total_time = ref 0.0 in
     let max_tiles = ref [] in
     
-    for game = 1 to 5 do
+    (* Play games sequentially *)
+    for game = 1 to num_games do
       let start_time = Unix.gettimeofday () in
       let board = ref 0x0000000000000000L in
       let score = ref 0 in
@@ -291,20 +358,56 @@ let experiment_dynamic_nodes () =
       total_score := !total_score + !score;
       max_tiles := get_max_tile !board :: !max_tiles;
       
-      Printf.printf "  Game %d: score=%d, max_tile=2^%d\n" 
-        game !score (get_max_tile !board);
-      flush stdout
+      let print_interval = max 1 (num_games / 4) in
+      if game mod print_interval = 0 then begin
+        Printf.printf "  Game %d: score=%d, max_tile=2^%d\n" 
+          game !score (get_max_tile !board);
+        flush stdout
+      end
     done;
     
-    let avg_score = !total_score / 5 in
-    let avg_max_tile = (List.fold_left (+) 0 !max_tiles) / 5 in
+    let avg_score = !total_score / num_games in
+    let avg_max_tile = (List.fold_left (+) 0 !max_tiles) / num_games in
     
     Printf.printf "  Average: score=%d, max_tile=2^%d, speed=%.1f games/sec\n"
-      avg_score avg_max_tile (5.0 /. !total_time)
+      avg_score avg_max_tile (float_of_int num_games /. !total_time)
   ) strategies
+
+(* Cleanup function *)
+let cleanup () =
+  match !pool with
+  | Some p -> Task.teardown_pool p
+  | None -> ()
 
 (* Main *)
 let () =
+  (* Parse command line arguments *)
+  let args = Sys.argv in
+  let num_games = ref 50 in
+  
+  (* Parse arguments: cores [num_games] *)
+  if Array.length args > 1 then begin
+    try
+      num_domains := int_of_string args.(1);
+      Printf.printf "Using %d cores for parallel evaluation\n" !num_domains
+    with _ ->
+      Printf.printf "Invalid number of cores, using default %d\n" !num_domains
+  end else
+    Printf.printf "Using default %d cores (pass number as argument to change)\n" !num_domains;
+  
+  if Array.length args > 2 then begin
+    try
+      num_games := int_of_string args.(2);
+      Printf.printf "Running %d games per budget\n" !num_games
+    with _ ->
+      Printf.printf "Invalid number of games, using default %d\n" !num_games
+  end;
+  
+  flush stdout;
+  
   init_tables ();
-  experiment_node_budgets ();
-  experiment_dynamic_nodes ()
+  experiment_node_budgets ~num_games:!num_games ();
+  experiment_dynamic_nodes ~num_games:!num_games ();
+  
+  (* Cleanup domain pool *)
+  cleanup ()
