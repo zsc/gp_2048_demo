@@ -1,0 +1,85 @@
+{
+  "baseline": {
+    "version": "基础版本",
+    "features": ["NumEmptyCells", "MaxTileValue", "MonotonicityScore", "SmoothnessScore"],
+    "functions": ["Add", "Sub", "Mul", "SafeDiv", "IfLTE"],
+    "best_scores": {
+      "avg_score": null,
+      "max_tile": null,
+      "fitness": null
+    },
+    "test_results": {
+      "games_played": 0,
+      "success_rate_512": null,
+      "success_rate_1024": null,
+      "success_rate_2048": null
+    },
+    "notes": "原始实现，包含基本的棋盘评估特征"
+  },
+  "v1.0_enhanced_terminals": {
+    "version": "增强终端节点 v1.0",
+    "features": ["NumEmptyCells", "MaxTileValue", "MonotonicityScore", "SmoothnessScore", "CornerPreference", "MergePotential", "EdgeAlignment"],
+    "functions": ["Add", "Sub", "Mul", "SafeDiv", "IfLTE"],
+    "improvements": [
+      "CornerPreference: 测量高数值方块在角落的位置偏好",
+      "MergePotential: 计算即时合并机会数量", 
+      "EdgeAlignment: 评估方块沿棋盘边缘的排列质量"
+    ],
+    "best_scores": {
+      "avg_score": null,
+      "max_tile": null,
+      "fitness": null
+    },
+    "test_results": {
+      "games_played": 0,
+      "success_rate_512": null,
+      "success_rate_1024": null,
+      "success_rate_2048": null
+    },
+    "notes": "添加了三个新的终端节点以改进棋盘评估质量"
+  },
+  "v1.1_advanced_functions": {
+    "version": "高级函数节点 v1.1",
+    "features": ["NumEmptyCells", "MaxTileValue", "MonotonicityScore", "SmoothnessScore", "CornerPreference", "MergePotential", "EdgeAlignment"],
+    "functions": ["Add", "Sub", "Mul", "SafeDiv", "IfLTE", "Min", "Max", "Sigmoid", "WeightedAvg"],
+    "improvements": [
+      "Min/Max: 启用显式优化比较",
+      "Sigmoid: S型激活函数，提供非线性变换",
+      "WeightedAvg: 动态特征加权，自适应权重调整"
+    ],
+    "best_scores": {
+      "avg_score": null,
+      "max_tile": null,
+      "fitness": null
+    },
+    "test_results": {
+      "games_played": 0,
+      "success_rate_512": null,
+      "success_rate_1024": null,
+      "success_rate_2048": null
+    },
+    "notes": "扩展函数集合以支持更复杂的决策逻辑和非线性变换"
+  },
+  "v1.2_enhanced_fitness": {
+    "version": "增强适应度函数 v1.2",
+    "features": ["NumEmptyCells", "MaxTileValue", "MonotonicityScore", "SmoothnessScore", "CornerPreference", "MergePotential", "EdgeAlignment"],
+    "functions": ["Add", "Sub", "Mul", "SafeDiv", "IfLTE", "Min", "Max", "Sigmoid", "WeightedAvg"],
+    "improvements": [
+      "更重的最大方块权重: max_tile ** 2.5",
+      "里程碑奖励: 512(+1K), 1024(+5K), 2048(+20K), 4096(+100K)",
+      "效率奖励: 基于每步得分，惩罚过长游戏"
+    ],
+    "best_scores": {
+      "avg_score": null,
+      "max_tile": null,
+      "fitness": null
+    },
+    "test_results": {
+      "games_played": 0,
+      "success_rate_512": null,
+      "success_rate_1024": null,
+      "success_rate_2048": null
+    },
+    "notes": "重新设计适应度函数以更好地引导进化朝向高分和高效游戏"
+  }
+}

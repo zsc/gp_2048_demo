@@ -62,6 +62,39 @@ class IfLTE(Function):
     def eval(self, a, b, c, d) -> float:
         return c if a <= b else d
 
+# === 高级函数节点 v1.1 ===
+class Min(Function):
+    """返回两个值中的最小值，用于显式优化比较"""
+    def __init__(self): super().__init__("MIN", 2)
+    def eval(self, a, b) -> float: return min(a, b)
+
+class Max(Function):
+    """返回两个值中的最大值，用于显式优化比较"""
+    def __init__(self): super().__init__("MAX", 2)  
+    def eval(self, a, b) -> float: return max(a, b)
+
+class Sigmoid(Function):
+    """S型激活函数，将输入映射到(0,1)区间"""
+    def __init__(self): super().__init__("SIGMOID", 1)
+    def eval(self, x) -> float:
+        import math
+        try:
+            return 1.0 / (1.0 + math.exp(-max(-500, min(500, x))))  # 防止溢出
+        except:
+            return 0.5  # 默认值
+
+class WeightedAvg(Function):
+    """加权平均，允许动态特征加权: (a*w + b*(1-w))，w通过sigmoid归一化"""
+    def __init__(self): super().__init__("WAVG", 3)
+    def eval(self, a, b, w) -> float:
+        import math
+        try:
+            # 将权重w通过sigmoid映射到(0,1)
+            weight = 1.0 / (1.0 + math.exp(-max(-500, min(500, w))))
+            return a * weight + b * (1.0 - weight)
+        except:
+            return (a + b) / 2.0  # 默认等权重平均
+
 # Terminal Set (Board Features)
 class Constant(Terminal):
     def __init__(self, value: float = None):
@@ -128,6 +161,81 @@ class SmoothnessScore(Terminal):
                 if i < 3 and board_arr[i+1, j] != 0:
                     smoothness -= abs(np.log2(board_arr[i, j]) - np.log2(board_arr[i+1, j]))
         return smoothness
+
+# === 增强终端节点 v1.0 ===
+class CornerPreference(Terminal):
+    """
+    测量高数值方块在角落的位置偏好。
+    角落位置权重更高，鼓励大方块聚集在角落。
+    """
+    def __init__(self): super().__init__("CORNER")
+    def eval(self, board: int) -> float:
+        board_arr = Game2048.get_board_array(board)
+        # 角落权重矩阵，角落权重最高
+        weights = np.array([
+            [16, 8, 4, 2],
+            [8,  4, 2, 1],
+            [4,  2, 1, 0.5],
+            [2,  1, 0.5, 0.25]
+        ])
+        # 计算加权分数，高数值方块在角落得分更高
+        score = 0.0
+        for i in range(4):
+            for j in range(4):
+                if board_arr[i, j] > 0:
+                    score += np.log2(board_arr[i, j]) * weights[i, j]
+        return score
+
+class MergePotential(Terminal):
+    """
+    计算即时合并机会数量。
+    统计相邻相同方块的对数，更多合并机会意味着更好的位置。
+    """
+    def __init__(self): super().__init__("MERGE")
+    def eval(self, board: int) -> float:
+        board_arr = Game2048.get_board_array(board)
+        merge_count = 0
+        
+        # 检查水平相邻
+        for i in range(4):
+            for j in range(3):
+                if board_arr[i, j] > 0 and board_arr[i, j] == board_arr[i, j+1]:
+                    merge_count += 1
+        
+        # 检查垂直相邻
+        for i in range(3):
+            for j in range(4):
+                if board_arr[i, j] > 0 and board_arr[i, j] == board_arr[i+1, j]:
+                    merge_count += 1
+        
+        return float(merge_count)
+
+class EdgeAlignment(Terminal):
+    """
+    评估方块沿棋盘边缘的排列质量。
+    边缘位置的高数值方块获得奖励。
+    """
+    def __init__(self): super().__init__("EDGE")
+    def eval(self, board: int) -> float:
+        board_arr = Game2048.get_board_array(board)
+        edge_score = 0.0
+        
+        # 边缘位置权重
+        edge_weight = 2.0
+        corner_weight = 4.0
+        
+        for i in range(4):
+            for j in range(4):
+                if board_arr[i, j] > 0:
+                    tile_value = np.log2(board_arr[i, j])
+                    # 角落位置
+                    if (i == 0 or i == 3) and (j == 0 or j == 3):
+                        edge_score += tile_value * corner_weight
+                    # 边缘位置
+                    elif i == 0 or i == 3 or j == 0 or j == 3:
+                        edge_score += tile_value * edge_weight
+        
+        return edge_score
 
 # --- 3. Define the Program (Individual) ---
 
@@ -289,9 +397,31 @@ def evaluate_fitness_worker(args: Tuple[Program, int, int]) -> Program:
 
     avg_score = total_score / games_per_individual
     avg_max_tile = total_max_tile / games_per_individual
+    avg_moves = total_moves / games_per_individual
     
-    # Fitness is a combination of score and max tile
-    program.fitness = avg_score + (avg_max_tile ** 2)
+    # === 增强适应度函数 v1.2 ===
+    # 基础分数和最大方块
+    base_fitness = avg_score + (avg_max_tile ** 2.5)  # 更重地加权最大方块
+    
+    # 里程碑奖励
+    milestone_bonus = 0
+    if avg_max_tile >= 512:  milestone_bonus += 1000
+    if avg_max_tile >= 1024: milestone_bonus += 5000
+    if avg_max_tile >= 2048: milestone_bonus += 20000
+    if avg_max_tile >= 4096: milestone_bonus += 100000
+    
+    # 效率奖励 - 惩罚过长的游戏，鼓励高效游戏
+    efficiency_bonus = 0
+    if avg_moves > 0:
+        score_per_move = avg_score / avg_moves
+        efficiency_bonus = score_per_move * 10  # 每步得分的10倍作为效率奖励
+        
+        # 如果达到高方块但步数过多，给予惩罚
+        if avg_max_tile >= 1024 and avg_moves > 2000:
+            efficiency_bonus -= (avg_moves - 2000) * 0.5
+    
+    # 最终适应度
+    program.fitness = base_fitness + milestone_bonus + efficiency_bonus
     program.game_score = avg_score
     program.max_tile = avg_max_tile
     return program
@@ -324,8 +454,10 @@ class GPEngine:
         self.games_per_individual = games_per_individual
         self.fitness_search_depth = fitness_search_depth
 
-        self.functions: List[Function] = [Add(), Sub(), Mul(), SafeDiv(), IfLTE()]
-        self.terminals: List[Terminal] = [NumEmptyCells(), MaxTileValue(), MonotonicityScore(), SmoothnessScore()]
+        self.functions: List[Function] = [Add(), Sub(), Mul(), SafeDiv(), IfLTE(),
+                                          Min(), Max(), Sigmoid(), WeightedAvg()]
+        self.terminals: List[Terminal] = [NumEmptyCells(), MaxTileValue(), MonotonicityScore(), SmoothnessScore(),
+                                          CornerPreference(), MergePotential(), EdgeAlignment()]
         
         self.population: List[Program] = []
         self.writer = SummaryWriter(log_dir)
