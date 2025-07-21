@@ -1,0 +1,24 @@
+(executable
+ (name experiment_ocaml)
+ (modules experiment_ocaml)
+ (libraries gp_2048_lib unix))
+
+(executable
+ (name experiment_ocaml_fast)
+ (modules experiment_ocaml_fast)
+ (libraries gp_2048_lib unix))
+
+(executable
+ (name gp_evolution_leaderboard)
+ (modules gp_evolution_leaderboard)
+ (libraries gp_2048_lib unix))
+
+(executable
+ (name experiment_dynamic_depth)
+ (modules experiment_dynamic_depth)
+ (libraries gp_2048_lib unix))
+
+(executable
+ (name experiment_node_limited)
+ (modules experiment_node_limited)
+ (libraries gp_2048_lib unix))
