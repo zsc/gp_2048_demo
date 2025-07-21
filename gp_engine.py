@@ -238,6 +238,84 @@ class EdgeAlignment(Terminal):
         
         return edge_score
 
+# === v1.3 游戏阶段感知终端节点 ===
+class GamePhase(Terminal):
+    """识别游戏阶段: 早期(<512), 中期(512-2048), 后期(>2048)"""
+    def __init__(self): super().__init__("PHASE")
+    def eval(self, board: int) -> float:
+        max_tile = Game2048.get_max_tile(board)
+        if max_tile < 512: return 0.0  # 早期
+        elif max_tile < 2048: return 1.0  # 中期
+        else: return 2.0  # 后期
+
+class ClusterCompactness(Terminal):
+    """测量高数值方块的聚集程度，紧密聚集得分更高"""
+    def __init__(self): super().__init__("CLUSTER")
+    def eval(self, board: int) -> float:
+        board_arr = Game2048.get_board_array(board)
+        cluster_score = 0.0
+        
+        # 找出所有高价值方块(>=64)
+        high_value_positions = []
+        for i in range(4):
+            for j in range(4):
+                if board_arr[i, j] >= 64:
+                    high_value_positions.append((i, j, board_arr[i, j]))
+        
+        if len(high_value_positions) < 2:
+            return 0.0
+        
+        # 计算高价值方块之间的紧密度
+        for idx1, (i1, j1, val1) in enumerate(high_value_positions):
+            for idx2 in range(idx1 + 1, len(high_value_positions)):
+                i2, j2, val2 = high_value_positions[idx2]
+                # 曼哈顿距离
+                distance = abs(i1 - i2) + abs(j1 - j2)
+                # 距离越近，分数越高，同时考虑方块值
+                if distance == 1:  # 相邻
+                    cluster_score += (val1 + val2) / 64.0
+                elif distance == 2:  # 对角或隔一格
+                    cluster_score += (val1 + val2) / 128.0
+        
+        return cluster_score
+
+class FutureMovePotential(Terminal):
+    """评估未来潜在的合并机会，考虑相隔一格的相同方块"""
+    def __init__(self): super().__init__("FUTURE")
+    def eval(self, board: int) -> float:
+        board_arr = Game2048.get_board_array(board)
+        future_score = 0.0
+        
+        # 检查相隔一格的相同方块（可以通过一次移动合并）
+        for i in range(4):
+            for j in range(4):
+                if board_arr[i, j] == 0:
+                    continue
+                    
+                # 检查向右隔一格
+                if j < 2 and board_arr[i, j] == board_arr[i, j+2]:
+                    # 检查中间是否可以清空
+                    if board_arr[i, j+1] == 0 or board_arr[i, j+1] < board_arr[i, j]:
+                        future_score += np.log2(board_arr[i, j])
+                
+                # 检查向下隔一格
+                if i < 2 and board_arr[i, j] == board_arr[i+2, j]:
+                    # 检查中间是否可以清空
+                    if board_arr[i+1, j] == 0 or board_arr[i+1, j] < board_arr[i, j]:
+                        future_score += np.log2(board_arr[i, j])
+        
+        # 额外奖励：检查L形和T形潜在合并模式
+        for i in range(3):
+            for j in range(3):
+                # L形模式
+                if board_arr[i, j] > 0:
+                    if board_arr[i, j] == board_arr[i+1, j] == board_arr[i, j+1]:
+                        future_score += np.log2(board_arr[i, j]) * 1.5
+                    if board_arr[i, j] == board_arr[i+1, j] == board_arr[i+1, j+1]:
+                        future_score += np.log2(board_arr[i, j]) * 1.5
+        
+        return future_score
+
 # --- 3. Define the Program (Individual) ---
 
 class Program:
@@ -458,15 +536,16 @@ class GPEngine:
         self.functions: List[Function] = [Add(), Sub(), Mul(), SafeDiv(), IfLTE(),
                                           Min(), Max(), Sigmoid(), WeightedAvg()]
         self.terminals: List[Terminal] = [NumEmptyCells(), MaxTileValue(), MonotonicityScore(), SmoothnessScore(),
-                                          CornerPreference(), MergePotential(), EdgeAlignment()]
+                                          CornerPreference(), MergePotential(), EdgeAlignment(),
+                                          GamePhase(), ClusterCompactness(), FutureMovePotential()]
         
         self.population: List[Program] = []
         self.writer = SummaryWriter(log_dir)
         # Use 80% of available CPUs to leave some for system
         import multiprocessing
-        num_cpus = max(1, int(multiprocessing.cpu_count() * 0.8))
-        print(f"使用 {num_cpus}/{multiprocessing.cpu_count()} 个CPU核心进行并行计算")
-        self.pool = Pool(processes=num_cpus)
+        self.num_cpus = max(1, int(multiprocessing.cpu_count() * 0.8))
+        print(f"使用 {self.num_cpus}/{multiprocessing.cpu_count()} 个CPU核心进行并行计算")
+        self.pool = Pool(processes=self.num_cpus)
 
     def _create_random_program(self, max_depth: int) -> Program:
         """Creates a single random program using the 'grow' method."""
@@ -605,7 +684,7 @@ class GPEngine:
             
             # Use map instead of imap for better CPU utilization
             # Calculate optimal chunksize for load balancing
-            chunksize = max(1, self.population_size // (num_cpus * 4))
+            chunksize = max(1, self.population_size // (self.num_cpus * 4))
             
             # Option 1: Use map without progress bar (better CPU usage)
             results = self.pool.map(evaluate_fitness_worker, eval_args, chunksize=chunksize)

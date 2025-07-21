@@ -12,7 +12,8 @@ from tqdm import tqdm
 from game import Game2048
 from gp_engine import GPEngine, Program, evaluate_fitness_worker, Add, Sub, Mul, SafeDiv, IfLTE, \
                        Constant, NumEmptyCells, MaxTileValue, MonotonicityScore, SmoothnessScore, \
-                       CornerPreference, MergePotential, EdgeAlignment, Min, Max, Sigmoid, WeightedAvg
+                       CornerPreference, MergePotential, EdgeAlignment, Min, Max, Sigmoid, WeightedAvg, \
+                       GamePhase, ClusterCompactness, FutureMovePotential
 
 # --- Flask & Socket.IO Setup ---
 app = Flask(__name__)
@@ -38,7 +39,9 @@ NODE_FACTORY = {
     # Terminals
     "EMPTY": NumEmptyCells, "MAX_TILE": MaxTileValue, "MONO": MonotonicityScore, "SMOOTH": SmoothnessScore,
     # 增强终端节点 v1.0
-    "CORNER": CornerPreference, "MERGE": MergePotential, "EDGE": EdgeAlignment
+    "CORNER": CornerPreference, "MERGE": MergePotential, "EDGE": EdgeAlignment,
+    # 游戏阶段感知节点 v1.3
+    "PHASE": GamePhase, "CLUSTER": ClusterCompactness, "FUTURE": FutureMovePotential
 }
 
 def serialize_program(program: Program) -> str:
