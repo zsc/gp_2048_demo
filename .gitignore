@@ -7,3 +7,7 @@ gp_2048
 test_alignment
 .DS_Store
 *.exe
+runs/
+test_tape.txt
+test_controlled.txt
+random_tape.txt

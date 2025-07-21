@@ -1,6 +1,6 @@
 (library
  (name gp_2048_lib)
- (modules game gp_tree expectimax gp_engine))
+ (modules game gp_tree expectimax gp_engine random_tape))
 
 (executable
  (public_name gp_2048)
@@ -12,3 +12,18 @@
  (name test_alignment)
  (modules test_alignment)
  (libraries gp_2048_lib unix))
+
+(executable
+ (name test_deterministic)
+ (modules test_deterministic)
+ (libraries gp_2048_lib unix))
+
+(executable
+ (name debug_move)
+ (modules debug_move)
+ (libraries gp_2048_lib))
+
+(executable
+ (name test_minimal)
+ (modules test_minimal)
+ (libraries gp_2048_lib))

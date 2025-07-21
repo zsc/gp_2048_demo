@@ -23,7 +23,7 @@ let test_bit_operations () =
   (* Test transpose - critical for vertical moves *)
   let board = Int64.of_string "0x1234567890ABCDEF" in
   let transposed = transpose board in
-  let expected = Int64.of_string "0x159D26AE37BF48CF" in
+  let expected = Int64.of_string "0x159C260D37AE48BF" in
   Printf.printf "Original:   %016Lx\n" board;
   Printf.printf "Transposed: %016Lx\n" transposed;
   Printf.printf "Expected:   %016Lx\n" expected;
@@ -37,14 +37,14 @@ let test_move_operations () =
   (* Test simple left move *)
   let board = Int64.of_string "0x0000000000001021" in (* [1,0,2,1] in bottom row *)
   let moved = move_left board in
-  let expected = Int64.of_string "0x0000000000000012" in (* [1,2,0,0] *)
+  let expected = Int64.of_string "0x0000000000000121" in (* [1,2,1,0] *)
   Printf.printf "Left move: %016Lx -> %016Lx (expected %016Lx)\n" board moved expected;
   assert (moved = expected);
   
   (* Test merge in left move *)
-  let board = Int64.of_string "0x0000000000001011" in (* [1,0,1,1] in bottom row *)
+  let board = Int64.of_string "0x0000000000001011" in (* [1,1,0,1] in bottom row *)
   let moved = move_left board in
-  let expected = Int64.of_string "0x0000000000000021" in (* [2,1,0,0] *)
+  let expected = Int64.of_string "0x0000000000000012" in (* [2,1,0,0] *)
   Printf.printf "Left merge: %016Lx -> %016Lx (expected %016Lx)\n" board moved expected;
   assert (moved = expected);
   

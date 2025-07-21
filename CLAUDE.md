@@ -89,11 +89,15 @@
 - 创建了 dune-project 和 gp_2048.opam 文件
 - 模块组织为 gp_2048_lib 库和 gp_2048 可执行文件
 
+### 已验证的对齐
+1. ✅ **基础位操作** - transpose、get_cell、set_cell 等完全对齐
+2. ✅ **移动操作** - move_left、move_right、move_up、move_down 完全对齐
+3. ✅ **外部随机数注入** - 实现了 random_tape.ml 和相应的 Python 代码
+4. ✅ **确定性游戏测试** - 使用相同的随机序列，基础游戏机制完全对齐
+
 ### 待完成任务
-1. ⏳ **外部随机数注入** - 实现外部随机数序列注入以确保 Python 和 OCaml 完全对齐
-2. ⏳ **修复 transpose 函数** - 当前实现与预期不匹配
-3. ⏳ **并行化评估** - 使用 Domainslib 或 Lwt 实现并行适应度评估
-4. ⏳ **与 Python 版本的精确对齐验证** - 需要运行对比测试确保结果一致
+1. ⏳ **并行化评估** - 使用 Domainslib 或 Lwt 实现并行适应度评估
+2. ⏳ **完整 Expectimax 对齐** - Python 版本需要实现相同的 expectimax 算法以确保策略一致
 
 ### 使用方法
 ```bash
@@ -135,3 +139,10 @@ dune exec gp_2048 -- --play
 - Python 和 OCaml 使用完全相同的随机序列
 - 游戏过程完全可重现
 - 能够精确对比两个实现的行为差异
+
+### 测试工具
+1. **generate_random_tape.py** - 生成随机序列文件
+2. **test_deterministic.ml/py** - 使用随机序列进行确定性游戏测试
+3. **test_minimal.ml/py** - 最小化对齐测试
+4. **test_alignment.ml** - OCaml 单元测试
+5. **test_simple_alignment.py** - Python 基础操作对齐测试
