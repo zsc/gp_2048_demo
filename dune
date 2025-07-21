@@ -30,4 +30,14 @@
  (modules benchmark_comprehensive)
  (libraries gp_2048_lib unix))
 
+(executable
+ (name experiment_ocaml)
+ (modules experiment_ocaml)
+ (libraries gp_2048_lib unix))
+
+(executable
+ (name experiment_ocaml_fast)
+ (modules experiment_ocaml_fast)
+ (libraries gp_2048_lib unix))
+
 

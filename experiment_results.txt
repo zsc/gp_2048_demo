@@ -1,0 +1,87 @@
+OCaml 2048 Experiment Results
+============================
+
+=== EXPERIMENT 1: Quick Depth Comparison ===
+
+Depth 1 (20 games):
+    Game 5/20: score=5624, tile=2^512
+    Game 10/20: score=3900, tile=2^256
+    Game 15/20: score=7336, tile=2^512
+    Game 20/20: score=7260, tile=2^512
+  Playing 20 games took 0.042s
+  Avg score: 5710
+  Avg max tile: 2^448
+  Games/sec: 474.5
+
+Depth 2 (10 games):
+    Game 5/10: score=9352, tile=2^1024
+    Game 10/10: score=7172, tile=2^512
+  Playing 10 games took 1.646s
+  Avg score: 7583
+  Avg max tile: 2^588
+  Games/sec: 6.1
+
+Depth 3 (5 games):
+    Game 5/5: score=7208, tile=2^512
+  Playing 5 games took 55.026s
+  Avg score: 8281
+  Avg max tile: 2^716
+  Games/sec: 0.1
+
+=== EXPERIMENT 2: GP Program Comparison ===
+
+Program: Simple
+    Game 5: score=7100, tile=2^512
+    Game 10: score=7848, tile=2^512
+  Playing 10 games took 1.683s
+  Avg score: 7149 (5.9 games/sec)
+
+Program: Weighted
+    Game 5: score=5604, tile=2^512
+    Game 10: score=7336, tile=2^512
+  Playing 10 games took 1.773s
+  Avg score: 7626 (5.6 games/sec)
+
+Program: Smoothness
+    Game 5: score=7384, tile=2^512
+    Game 10: score=7572, tile=2^512
+  Playing 10 games took 2.585s
+  Avg score: 7998 (3.9 games/sec)
+
+=== EXPERIMENT 3: Quick Evolution Test ===
+
+Generation 1/5:
+  Best fitness: 47915.1
+  Best avg_score: 2404
+  Best avg_tile: 2^213.3
+
+Generation 2/5:
+  Best fitness: 68109.3
+  Best avg_score: 2573
+  Best avg_tile: 2^256.0
+
+Generation 3/5:
+  Best fitness: 68089.3
+  Best avg_score: 2553
+  Best avg_tile: 2^256.0
+
+Generation 4/5:
+  Best fitness: 68149.3
+  Best avg_score: 2613
+  Best avg_tile: 2^256.0
+
+Generation 5/5:
+  Best fitness: 68142.7
+  Best avg_score: 2607
+  Best avg_tile: 2^256.0
+
+Final test of best program (5 games):
+  Game 1: score=6748, tile=2^512
+  Game 2: score=7320, tile=2^512
+  Game 3: score=7208, tile=2^512
+  Game 4: score=7464, tile=2^512
+  Game 5: score=7252, tile=2^512
+
+  Final avg score: 7198
+
+All experiments completed! Results saved to experiment_results.txt
