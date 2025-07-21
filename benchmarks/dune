@@ -7,3 +7,8 @@
  (name benchmark_comprehensive)
  (modules benchmark_comprehensive)
  (libraries gp_2048_lib unix))
+
+(executable
+ (name benchmark_eval_lut)
+ (modules benchmark_eval_lut)
+ (libraries gp_2048_lib unix))
