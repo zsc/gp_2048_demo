@@ -233,13 +233,14 @@ let evolve_advanced () =
           (* Standard crossover *)
           let p1 = tournament_selection rng !population config.tournament_size in
           let p2 = tournament_selection rng !population config.tournament_size in
-          let child = crossover rng p1 p2 config.max_depth in
+          let child1, child2 = crossover rng p1 p2 in
+          let child = if Random.State.bool rng then child1 else child2 in
           new_pop.(!idx) <- child;
           incr idx
         end else if strategy < 85 then begin
           (* Mutation only *)
           let parent = tournament_selection rng !population config.tournament_size in
-          let child = mutate rng parent config.max_depth in
+          let child = mutate rng parent config.mutation_rate config.max_depth in
           new_pop.(!idx) <- child;
           incr idx
         end else begin

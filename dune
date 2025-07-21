@@ -1,33 +1,12 @@
-(library
- (name gp_2048_lib)
- (modules game gp_tree expectimax gp_engine random_tape expectimax_aligned))
-
-; (library
-;  (name gp_2048_parallel)
-;  (modules gp_engine_parallel)
-;  (libraries gp_2048_lib domainslib))
-
 (executable
  (public_name gp_2048)
  (name main)
  (modules main)
  (libraries gp_2048_lib unix))
 
-; (executable
-;  (public_name gp_2048_parallel)
-;  (name main_parallel)
-;  (modules main_parallel)
-;  (libraries gp_2048_lib gp_2048_parallel unix))
-
-
 (executable
- (name benchmark_comparison)
- (modules benchmark_comparison)
- (libraries gp_2048_lib unix))
-
-(executable
- (name benchmark_comprehensive)
- (modules benchmark_comprehensive)
+ (name test_score_based)
+ (modules test_score_based)
  (libraries gp_2048_lib unix))
 
 

@@ -1,0 +1,9 @@
+(executable
+ (name benchmark_comparison)
+ (modules benchmark_comparison)
+ (libraries gp_2048_lib unix))
+
+(executable
+ (name benchmark_comprehensive)
+ (modules benchmark_comprehensive)
+ (libraries gp_2048_lib unix))

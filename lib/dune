@@ -1,0 +1,3 @@
+(library
+ (name gp_2048_lib)
+ (modules game gp_tree gp_engine random_tape expectimax_aligned))

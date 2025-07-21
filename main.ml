@@ -1,6 +1,6 @@
 open Gp_2048_lib.Gp_engine
 open Gp_2048_lib.Gp_tree
-open Gp_2048_lib.Expectimax
+open Gp_2048_lib.Expectimax_aligned
 
 let print_usage () =
   Printf.printf "Usage: gp_2048 [options]\n";

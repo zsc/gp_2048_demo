@@ -1,5 +1,5 @@
 open Gp_tree
-open Expectimax
+open Expectimax_aligned
 
 type population = program array
 
