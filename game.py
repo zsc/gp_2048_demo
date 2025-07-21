@@ -177,9 +177,39 @@ class Game2048:
         return arr
 
     @staticmethod
-    @njit
-    def _is_game_over_numba(board) -> bool:
+    @njit('boolean(uint64)')
+    def _is_game_over_numba(board):
         """Numba加速的游戏结束检测（简化版本）"""
+        # 检查空格
+        for i in range(16):
+            if ((board>>(4*i)) & 0xF) == 0:
+                return False
+        
+        # 检查水平相邻合并
+        for r in range(4):
+            for c in range(3):
+                pos1 = r * 4 + c
+                pos2 = r * 4 + c + 1
+                val1 = (board >> (4*pos1)) & 0xF
+                val2 = (board >> (4*pos2)) & 0xF
+                if val1 > 0 and val1 == val2:
+                    return False
+        
+        # 检查垂直相邻合并
+        for r in range(3):
+            for c in range(4):
+                pos1 = r * 4 + c
+                pos2 = (r + 1) * 4 + c
+                val1 = (board >> (4*pos1)) & 0xF
+                val2 = (board >> (4*pos2)) & 0xF
+                if val1 > 0 and val1 == val2:
+                    return False
+        
+        return True
+
+    @staticmethod
+    def _is_game_over_python(board):
+        """纯Python版本的游戏结束检测，用于对比"""
         # 检查空格
         for i in range(16):
             if ((board>>(4*i)) & 0xF) == 0:
@@ -232,9 +262,19 @@ class Game2048:
             return True
 
     @staticmethod
-    @njit
-    def _get_max_tile_numba(board) -> int:
+    @njit('int64(uint64)')
+    def _get_max_tile_numba(board):
         """Numba加速的最大方块获取"""
+        m = 0
+        tmp = board
+        for _ in range(16):
+            m = max(m, tmp & 0xF)
+            tmp >>= 4
+        return 0 if m==0 else (1<<m)
+    
+    @staticmethod
+    def _get_max_tile_python(board):
+        """纯Python版本的最大方块获取，用于对比"""
         m = 0
         tmp = board
         for _ in range(16):

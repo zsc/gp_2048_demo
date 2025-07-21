@@ -246,7 +246,7 @@ class GPTester:
         
         return {
             "avg_score": float(np.mean(scores)),
-            "max_tile": float(np.mean(max_tiles)),
+            "avg_max_tile": float(np.mean(max_tiles)),
             "avg_moves": float(np.mean(moves_list)),
             "success_rate_512": success_512 / num_games,
             "success_rate_1024": success_1024 / num_games,

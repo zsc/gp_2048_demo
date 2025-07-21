@@ -461,7 +461,11 @@ class GPEngine:
         
         self.population: List[Program] = []
         self.writer = SummaryWriter(log_dir)
-        self.pool = Pool() # For parallel fitness evaluation
+        # Use 80% of available CPUs to leave some for system
+        import multiprocessing
+        num_cpus = max(1, int(multiprocessing.cpu_count() * 0.8))
+        print(f"使用 {num_cpus}/{multiprocessing.cpu_count()} 个CPU核心进行并行计算")
+        self.pool = Pool(processes=num_cpus)
 
     def _create_random_program(self, max_depth: int) -> Program:
         """Creates a single random program using the 'grow' method."""
