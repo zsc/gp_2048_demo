@@ -4,6 +4,16 @@ import random
 from typing import Tuple, List
 import unittest
 
+try:
+    from numba import njit
+    NUMBA_AVAILABLE = True
+except ImportError:
+    def njit(*args, **kwargs):
+        def decorator(func):
+            return func
+        return decorator
+    NUMBA_AVAILABLE = False
+
 class Game2048:
     """
     无状态的2048操作集合：
@@ -166,36 +176,84 @@ class Game2048:
             arr[i//4, i%4] = 0 if v==0 else (1<<v)
         return arr
 
-    @classmethod
-    def is_game_over(cls, board:int) -> bool:
-        """检查无空格且无法合并时游戏结束。"""
-        cls._init_tables()
-        # 空格检查
+    @staticmethod
+    @njit
+    def _is_game_over_numba(board) -> bool:
+        """Numba加速的游戏结束检测（简化版本）"""
+        # 检查空格
         for i in range(16):
             if ((board>>(4*i)) & 0xF) == 0:
                 return False
-        # 横向可合并？
+        
+        # 检查水平相邻合并
         for r in range(4):
-            row_int = (board >> (16*r)) & 0xFFFF
-            if cls._left_table[row_int] != row_int:
-                return False
-        # 纵向可合并？
-        tb = cls._transpose(board)
-        for r in range(4):
-            row_int = (tb >> (16*r)) & 0xFFFF
-            if cls._left_table[row_int] != row_int:
-                return False
+            for c in range(3):
+                pos1 = r * 4 + c
+                pos2 = r * 4 + c + 1
+                val1 = (board >> (4*pos1)) & 0xF
+                val2 = (board >> (4*pos2)) & 0xF
+                if val1 > 0 and val1 == val2:
+                    return False
+        
+        # 检查垂直相邻合并
+        for r in range(3):
+            for c in range(4):
+                pos1 = r * 4 + c
+                pos2 = (r + 1) * 4 + c
+                val1 = (board >> (4*pos1)) & 0xF
+                val2 = (board >> (4*pos2)) & 0xF
+                if val1 > 0 and val1 == val2:
+                    return False
+        
         return True
 
+    @classmethod
+    def is_game_over(cls, board:int) -> bool:
+        """检查无空格且无法合并时游戏结束。"""
+        if NUMBA_AVAILABLE:
+            return cls._is_game_over_numba(board)
+        else:
+            cls._init_tables()
+            # 空格检查
+            for i in range(16):
+                if ((board>>(4*i)) & 0xF) == 0:
+                    return False
+            # 横向可合并？
+            for r in range(4):
+                row_int = (board >> (16*r)) & 0xFFFF
+                if cls._left_table[row_int] != row_int:
+                    return False
+            # 纵向可合并？
+            tb = cls._transpose(board)
+            for r in range(4):
+                row_int = (tb >> (16*r)) & 0xFFFF
+                if cls._left_table[row_int] != row_int:
+                    return False
+            return True
+
     @staticmethod
-    def get_max_tile(board:int) -> int:
-        """返回当前最大 tile（2^n）的真实值。"""
+    @njit
+    def _get_max_tile_numba(board) -> int:
+        """Numba加速的最大方块获取"""
         m = 0
         tmp = board
         for _ in range(16):
             m = max(m, tmp & 0xF)
             tmp >>= 4
         return 0 if m==0 else (1<<m)
+    
+    @staticmethod
+    def get_max_tile(board:int) -> int:
+        """返回当前最大 tile（2^n）的真实值。"""
+        if NUMBA_AVAILABLE:
+            return Game2048._get_max_tile_numba(board)
+        else:
+            m = 0
+            tmp = board
+            for _ in range(16):
+                m = max(m, tmp & 0xF)
+                tmp >>= 4
+            return 0 if m==0 else (1<<m)
 
 class TestGame2048(unittest.TestCase):
     def setUp(self):
