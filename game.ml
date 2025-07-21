@@ -27,62 +27,30 @@ let left_table = Array.make 65536 0
 let right_table = Array.make 65536 0
 let score_table = Array.make 65536 0
 
+let load_table_from_file filename =
+  let ic = open_in_bin filename in
+  let table = Array.make 65536 0 in
+  for i = 0 to 65535 do
+    let b0 = input_byte ic in
+    let b1 = input_byte ic in
+    let b2 = input_byte ic in
+    let b3 = input_byte ic in
+    table.(i) <- b0 lor (b1 lsl 8) lor (b2 lsl 16) lor (b3 lsl 24)
+  done;
+  close_in ic;
+  table
+
 let init_tables () =
-  for row = 0 to 65535 do
-    let cells = Array.init 4 (fun i -> (row lsr (i * 4)) land 0xF) in
-    
-    (* Compute left move *)
-    let left_cells = Array.copy cells in
-    let write_pos = ref 0 in
-    let score = ref 0 in
-    
-    for read_pos = 0 to 3 do
-      if left_cells.(read_pos) <> 0 then begin
-        if !write_pos > 0 && left_cells.(!write_pos - 1) = left_cells.(read_pos) then begin
-          left_cells.(!write_pos - 1) <- left_cells.(!write_pos - 1) + 1;
-          score := !score + (1 lsl left_cells.(!write_pos - 1));
-          left_cells.(read_pos) <- 0
-        end else begin
-          if !write_pos <> read_pos then begin
-            left_cells.(!write_pos) <- left_cells.(read_pos);
-            left_cells.(read_pos) <- 0
-          end;
-          write_pos := !write_pos + 1
-        end
-      end
-    done;
-    
-    let left_result = ref 0 in
-    for i = 0 to 3 do
-      left_result := !left_result lor (left_cells.(i) lsl (i * 4))
-    done;
-    left_table.(row) <- !left_result;
-    score_table.(row) <- !score;
-    
-    (* Compute right move by reversing *)
-    let right_cells = Array.init 4 (fun i -> cells.(3 - i)) in
-    let write_pos = ref 0 in
-    
-    for read_pos = 0 to 3 do
-      if right_cells.(read_pos) <> 0 then begin
-        if !write_pos > 0 && right_cells.(!write_pos - 1) = right_cells.(read_pos) then begin
-          right_cells.(!write_pos - 1) <- right_cells.(!write_pos - 1) + 1;
-          right_cells.(read_pos) <- 0
-        end else begin
-          if !write_pos <> read_pos then begin
-            right_cells.(!write_pos) <- right_cells.(read_pos);
-            right_cells.(read_pos) <- 0
-          end;
-          write_pos := !write_pos + 1
-        end
-      end
-    done;
-    
-    let right_result = ref 0 in
-    for i = 0 to 3 do
-      right_result := !right_result lor (right_cells.(3 - i) lsl (i * 4))
-    done;
-    right_table.(row) <- !right_result
+  (* Load pre-generated tables from Python *)
+  let left = load_table_from_file "left_table.bin" in
+  let right = load_table_from_file "right_table.bin" in
+  let score = load_table_from_file "score_table.bin" in
+  
+  (* Copy to global arrays *)
+  for i = 0 to 65535 do
+    left_table.(i) <- left.(i);
+    right_table.(i) <- right.(i);
+    score_table.(i) <- score.(i)
   done
 
 let transpose board =

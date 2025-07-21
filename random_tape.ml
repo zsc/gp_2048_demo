@@ -79,3 +79,19 @@ let add_random_tile_from_tape board tape =
         List.nth cells (event.position mod List.length cells)
     in
     set_cell board actual_idx event.value
+
+(* Add tile using pre-consumed event *)
+let add_tile_with_event board event =
+  let open Game in
+  let empty_cells = get_empty_cells board in
+  match empty_cells with
+  | [] -> board
+  | cells ->
+    (* Map tape position to actual empty cell index *)
+    let actual_idx = 
+      if event.position < List.length cells then
+        List.nth cells event.position
+      else
+        List.nth cells (event.position mod List.length cells)
+    in
+    set_cell board actual_idx event.value

@@ -65,7 +65,13 @@ let eval_program program board =
       | NumEmptyCells -> 
         (float_of_int (count_empty_cells board), idx + 1)
       | MaxTileValue ->
-        (float_of_int (get_max_tile board), idx + 1)
+        (* Return log2 value to match Python *)
+        let max_log2 = ref 0 in
+        for i = 0 to 15 do
+          let cell = get_cell board i in
+          if cell > !max_log2 then max_log2 := cell
+        done;
+        (float_of_int !max_log2, idx + 1)
       | MonotonicityScore ->
         (monotonicity_score board, idx + 1)
       | SmoothnessScore ->
