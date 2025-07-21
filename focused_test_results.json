@@ -1,0 +1,46 @@
+{
+  "baseline": {
+    "version": "基础版本",
+    "training_time": 20.5384361743927,
+    "training_fitness": 5938144.154707212,
+    "avg_score": 1374.4,
+    "avg_max_tile": 128.0,
+    "success_rate_512": 0.0,
+    "success_rate_1024": 0.0,
+    "avg_moves": 142.8,
+    "program_str": "IFLTE(ADD(DIV(C(-0.91), EMPTY), ADD(EMPTY, SMOOTH)), DIV(IFLTE(SMOOTH, MONO, MAX_TILE, EMPTY), ADD(C(-0.94), SMOOTH)), MUL(MUL(SMOOTH, MONO), ADD(MAX_TILE, MONO)), DIV(SUB(C(-0.77), MONO), ADD(SMOOTH, MAX_TILE)))"
+  },
+  "v1.0": {
+    "version": "v1.0增强终端",
+    "training_time": 20.494075298309326,
+    "training_fitness": 1052198.779661017,
+    "avg_score": 2480.8,
+    "avg_max_tile": 204.8,
+    "success_rate_512": 0.0,
+    "success_rate_1024": 0.0,
+    "avg_moves": 216.2,
+    "program_str": "IFLTE(MUL(IFLTE(MONO, MONO, EMPTY, SMOOTH), MUL(MERGE, EMPTY)), MONO, MERGE, IFLTE(EMPTY, DIV(EDGE, SMOOTH), ADD(MAX_TILE, MERGE), SUB(MONO, EMPTY)))"
+  },
+  "v1.1": {
+    "version": "v1.1高级函数",
+    "training_time": 20.488924980163574,
+    "training_fitness": 5938217.305219426,
+    "avg_score": 3745.6,
+    "avg_max_tile": 320.0,
+    "success_rate_512": 0.4,
+    "success_rate_1024": 0.0,
+    "avg_moves": 281.8,
+    "program_str": "WAVG(IFLTE(WAVG(MONO, MONO, EMPTY), DIV(MERGE, MERGE), ADD(MAX_TILE, MONO), MERGE), WAVG(EMPTY, SIGMOID(EDGE), MERGE), MONO)"
+  },
+  "v1.2": {
+    "version": "v1.2增强适应度",
+    "training_time": 20.48858094215393,
+    "training_fitness": 5938217.305219426,
+    "avg_score": 3745.6,
+    "avg_max_tile": 320.0,
+    "success_rate_512": 0.4,
+    "success_rate_1024": 0.0,
+    "avg_moves": 281.8,
+    "program_str": "WAVG(IFLTE(WAVG(MONO, MONO, EMPTY), DIV(MERGE, MERGE), ADD(MAX_TILE, MONO), MERGE), WAVG(EMPTY, SIGMOID(EDGE), MERGE), MONO)"
+  }
+}
