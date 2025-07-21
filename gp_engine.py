@@ -3,6 +3,7 @@
 import random
 import copy
 import numpy as np
+import time
 import unittest
 from typing import List, Set, Tuple, Any
 from multiprocessing import Pool
@@ -593,14 +594,30 @@ class GPEngine:
         self._initialize_population()
 
         for gen in range(self.generations):
+            gen_start_time = time.time()
             print(f"\n--- Generation {gen+1}/{self.generations} ---")
             
             # Evaluate fitness in parallel
+            eval_start_time = time.time()
             print("Evaluating fitness...")
             # We pass tuples of (program, games_per_individual, search_depth) to the worker
             eval_args = [(p, self.games_per_individual, self.fitness_search_depth) for p in self.population]
-            results = list(tqdm(self.pool.imap(evaluate_fitness_worker, eval_args), total=self.population_size))
+            
+            # Use map instead of imap for better CPU utilization
+            # Calculate optimal chunksize for load balancing
+            chunksize = max(1, self.population_size // (num_cpus * 4))
+            
+            # Option 1: Use map without progress bar (better CPU usage)
+            results = self.pool.map(evaluate_fitness_worker, eval_args, chunksize=chunksize)
+            
+            # Option 2: If progress bar is needed, use imap_unordered with larger chunks
+            # results = list(tqdm(self.pool.imap_unordered(evaluate_fitness_worker, eval_args, chunksize=chunksize), 
+            #                    total=self.population_size))
+            
             self.population = results
+            
+            eval_time = time.time() - eval_start_time
+            print(f"Fitness evaluation completed in {eval_time:.1f}s")
 
             # Sort by fitness (descending)
             self.population.sort(key=lambda p: p.fitness, reverse=True)
