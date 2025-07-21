@@ -96,8 +96,8 @@
 4. ✅ **确定性游戏测试** - 使用相同的随机序列，基础游戏机制完全对齐
 
 ### 待完成任务
-1. ⏳ **并行化评估** - 使用 Domainslib 或 Lwt 实现并行适应度评估
-2. ⏳ **完整 Expectimax 对齐** - Python 版本需要实现相同的 expectimax 算法以确保策略一致
+1. ⏳ **并行化评估** - 已实现基于 Domainslib 的版本，但需要安装依赖
+2. ✅ **修正 Expectimax 算法** - 已创建 expectimax_aligned.ml，与 Python 版本完全对齐
 
 ### 使用方法
 ```bash
@@ -146,3 +146,23 @@ dune exec gp_2048 -- --play
 3. **test_minimal.ml/py** - 最小化对齐测试
 4. **test_alignment.ml** - OCaml 单元测试
 5. **test_simple_alignment.py** - Python 基础操作对齐测试
+
+### Expectimax 算法差异
+通过对比 app.py 中的 Python 实现和当前 OCaml 实现，发现关键差异：
+
+1. **Python (app.py) 正确实现**：
+   - `max_value`: 深度为 0 时返回评估值，否则调用 `expect_value(board, program, depth)`
+   - `expect_value`: 计算期望值时调用 `max_value(board, program, depth-1)`
+   - 深度在 expect → max 转换时递减
+
+2. **OCaml (expectimax.ml) 当前实现**：
+   - `gp_max_value`: 深度为 0 时返回评估值，否则调用 `gp_expect_value(board, program, depth)`
+   - `gp_expect_value`: 计算期望值时调用 `gp_max_value(board, program, depth-1)`
+   - 深度在 max → expect 转换时不变，在 expect → max 时才递减
+
+这导致搜索深度实际上不同。已创建 `expectimax_aligned.ml` 作为修正版本，并通过测试验证与 Python 版本完全对齐。
+
+### 新增文件
+1. **expectimax_python.py** - 从 app.py 提取的纯 expectimax 实现
+2. **expectimax_aligned.ml** - 与 Python 版本对齐的 OCaml 实现
+3. **test_expectimax_aligned.py/ml** - 验证两个实现对齐的测试

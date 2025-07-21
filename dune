@@ -1,12 +1,23 @@
 (library
  (name gp_2048_lib)
- (modules game gp_tree expectimax gp_engine random_tape))
+ (modules game gp_tree expectimax gp_engine random_tape expectimax_aligned))
+
+; (library
+;  (name gp_2048_parallel)
+;  (modules gp_engine_parallel)
+;  (libraries gp_2048_lib domainslib))
 
 (executable
  (public_name gp_2048)
  (name main)
  (modules main)
  (libraries gp_2048_lib unix))
+
+; (executable
+;  (public_name gp_2048_parallel)
+;  (name main_parallel)
+;  (modules main_parallel)
+;  (libraries gp_2048_lib gp_2048_parallel unix))
 
 (test
  (name test_alignment)
@@ -19,11 +30,11 @@
  (libraries gp_2048_lib unix))
 
 (executable
- (name debug_move)
- (modules debug_move)
+ (name test_minimal)
+ (modules test_minimal)
  (libraries gp_2048_lib))
 
 (executable
- (name test_minimal)
- (modules test_minimal)
+ (name test_expectimax_aligned)
+ (modules test_expectimax_aligned)
  (libraries gp_2048_lib))
