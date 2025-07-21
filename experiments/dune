@@ -21,4 +21,4 @@
 (executable
  (name experiment_node_limited)
  (modules experiment_node_limited)
- (libraries gp_2048_lib unix))
+ (libraries gp_2048_lib unix domainslib))

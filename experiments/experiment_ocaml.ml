@@ -107,7 +107,7 @@ let experiment_gp_programs num_games =
         max_tiles := max_tile :: !max_tiles;
         
         if game mod 5 = 0 then begin
-          Printf.printf "    Game %d/%d: score=%d, max_tile=2^%d\n" 
+          Printf.printf "    Game %d/%d: score=%d, max_tile=%d\n" 
             game num_games score max_tile;
           flush stdout
         end
@@ -196,7 +196,7 @@ let experiment_evolution generations pop_size =
     let score, max_tile = play_game best rng 2 1000 in
     test_scores := score :: !test_scores;
     test_tiles := max_tile :: !test_tiles;
-    Printf.printf "  Game %d: score=%d, max_tile=2^%d\n" i score max_tile;
+    Printf.printf "  Game %d: score=%d, max_tile=%d\n" i score max_tile;
     flush stdout
   done;
   

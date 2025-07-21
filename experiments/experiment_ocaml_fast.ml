@@ -54,7 +54,7 @@ let experiment_depth_comparison () =
         max_tiles := max_tile :: !max_tiles;
         
         if game mod 5 = 0 then begin
-          let msg = Printf.sprintf "    Game %d/%d: score=%d, tile=2^%d" 
+          let msg = Printf.sprintf "    Game %d/%d: score=%d, tile=%d" 
             game num_games score max_tile in
           Printf.printf "%s\n" msg;
           append_result msg;
@@ -114,7 +114,7 @@ let experiment_gp_programs () =
         scores := score :: !scores;
         
         if game = 5 || game = 10 then begin
-          let msg = Printf.sprintf "    Game %d: score=%d, tile=2^%d" 
+          let msg = Printf.sprintf "    Game %d: score=%d, tile=%d" 
             game score max_tile in
           Printf.printf "%s\n" msg;
           append_result msg;
@@ -195,7 +195,7 @@ let experiment_evolution () =
   for i = 1 to 5 do
     let score, max_tile = play_game best rng 2 500 in
     final_scores := score :: !final_scores;
-    let msg = Printf.sprintf "  Game %d: score=%d, tile=2^%d" i score max_tile in
+    let msg = Printf.sprintf "  Game %d: score=%d, tile=%d" i score max_tile in
     Printf.printf "%s\n" msg;
     append_result msg;
     flush stdout

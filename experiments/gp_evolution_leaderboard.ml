@@ -86,7 +86,7 @@ let test_program program generation description num_games depth =
     max_tiles := max_tile :: !max_tiles;
     
     if i mod 5 = 0 then begin
-      Printf.printf "  Test game %d/%d: score=%d, tile=2^%d\n" 
+      Printf.printf "  Test game %d/%d: score=%d, tile=%d\n" 
         i num_games score max_tile;
       flush stdout
     end

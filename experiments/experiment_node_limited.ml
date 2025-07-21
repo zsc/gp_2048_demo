@@ -253,7 +253,7 @@ let experiment_node_budgets ?(num_games=50) () =
       
       let print_interval = max 1 (num_games / 5) in
       if game mod print_interval = 0 then begin
-        Printf.printf "  Game %d: score=%d, max_tile=2^%d, time=%.1fs\n" 
+        Printf.printf "  Game %d: score=%d, max_tile=%d, time=%.1fs\n" 
           game !score max_tile elapsed;
         flush stdout
       end
@@ -274,7 +274,7 @@ let experiment_node_budgets ?(num_games=50) () =
     ) 0.0 !scores) /. float_of_int num_games in
     let std_dev = sqrt variance in
     
-    Printf.printf "  Summary: avg_score=%d±%.0f, max=%d, avg_tile=2^%d, speed=%.1f games/sec\n"
+    Printf.printf "  Summary: avg_score=%d±%.0f, max=%d, avg_tile=%d, speed=%.1f games/sec\n"
       avg_score std_dev max_score avg_max_tile games_per_sec;
     
     Printf.fprintf oc "%11d | %9d | %7.0f | %9d | %12d | %9.1f | %8.1f\n"
@@ -360,7 +360,7 @@ let experiment_dynamic_nodes ?(num_games=20) () =
       
       let print_interval = max 1 (num_games / 4) in
       if game mod print_interval = 0 then begin
-        Printf.printf "  Game %d: score=%d, max_tile=2^%d\n" 
+        Printf.printf "  Game %d: score=%d, max_tile=%d\n" 
           game !score (get_max_tile !board);
         flush stdout
       end
@@ -369,7 +369,7 @@ let experiment_dynamic_nodes ?(num_games=20) () =
     let avg_score = !total_score / num_games in
     let avg_max_tile = (List.fold_left (+) 0 !max_tiles) / num_games in
     
-    Printf.printf "  Average: score=%d, max_tile=2^%d, speed=%.1f games/sec\n"
+    Printf.printf "  Average: score=%d, max_tile=%d, speed=%.1f games/sec\n"
       avg_score avg_max_tile (float_of_int num_games /. !total_time)
   ) strategies
 

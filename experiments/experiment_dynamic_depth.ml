@@ -223,7 +223,7 @@ let compare_depth_strategies () =
       total_nodes := !total_nodes + !game_nodes;
       max_tiles := max_tile :: !max_tiles;
       
-      Printf.printf "  Game %d: score=%d, moves=%d, max_tile=2^%d, nodes=%d\n"
+      Printf.printf "  Game %d: score=%d, moves=%d, max_tile=%d, nodes=%d\n"
         game !score !moves max_tile !game_nodes;
       flush stdout
     done;
@@ -233,7 +233,7 @@ let compare_depth_strategies () =
     let avg_nodes = !total_nodes / 5 in
     let avg_max_tile = (List.fold_left (+) 0 !max_tiles) / 5 in
     
-    Printf.printf "  Average: score=%d, moves=%d, max_tile=2^%d\n" 
+    Printf.printf "  Average: score=%d, moves=%d, max_tile=%d\n" 
       avg_score avg_moves avg_max_tile;
     Printf.printf "  Performance: %.1f games/sec, %d nodes/game\n"
       (5.0 /. !total_time) avg_nodes;
@@ -327,7 +327,7 @@ let test_adaptive_node_budget () =
         end
     done;
     
-    Printf.printf "  Final: score=%d, max_tile=2^%d\n\n" 
+    Printf.printf "  Final: score=%d, max_tile=%d\n\n" 
       !score (get_max_tile !board);
     flush stdout
   ) time_budgets
