@@ -9,5 +9,10 @@
  (modules test_score_based)
  (libraries gp_2048_lib unix))
 
+(executable
+ (name inference_cli)
+ (modules inference_cli)
+ (libraries gp_2048_lib unix))
+
 
 

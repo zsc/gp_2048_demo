@@ -85,7 +85,7 @@
                 <div>
                     <h2>Game Board</h2>
                     <div id="game-info">
-                        <p><strong>Score:</strong> <span id="game-score">0</span> | <strong>Max Tile:</strong> <span id="game-max-tile">0</span></p>
+                        <p><strong>Score:</strong> <span id="game-score">0</span> | <strong>Max Tile:</strong> <span id="game-max-tile">0</span> | <strong>OCaml Inference:</strong> <span id="inference-time">-</span> ms | <strong>Node Budget:</strong> <span id="node-budget">-</span></p>
                     </div>
                     <div id="board-container"></div>
                 </div>
@@ -103,6 +103,9 @@
                     <button id="new-game-btn">New Game</button>
                     <button id="ai-play-btn" disabled>Let AI Play</button>
                     <button id="ai-stop-btn" disabled style="display: none; background-color: #dc3545;">Stop AI</button>
+                    <div style="margin-top: 10px;">
+                        <label>Playback Speed: <input type="range" id="playback-speed" min="50" max="1000" value="200" style="width: 100px;"> <span id="speed-value">200</span>ms</label>
+                    </div>
                 </div>
             </div>
         </div>
@@ -188,6 +191,8 @@
             const searchDepthInput = document.getElementById('search-depth');
             const gameScoreEl = document.getElementById('game-score');
             const gameMaxTileEl = document.getElementById('game-max-tile');
+            const playbackSpeedSlider = document.getElementById('playback-speed');
+            const speedValueEl = document.getElementById('speed-value');
 
             function int64ToBoardArray(boardInt) {
                 const board = Array(4).fill(0).map(() => Array(4).fill(0));
@@ -278,17 +283,40 @@
                 });
             }
 
+            // Variables for game replay
+            let gameTrace = null;
+            let currentTraceIndex = 0;
+            let replayInterval = null;
+            let replaySpeed = 200; // milliseconds between moves
+            
             aiPlayBtn.addEventListener('click', () => {
                 if (!isGameOver && modelSelector.value) {
                     isAIPlaying = true;
                     updateButtonStates();
-                    requestNextAIMove();
+                    
+                    // Request complete game from OCaml
+                    socket.emit('request_complete_game', {
+                        model: modelSelector.value,
+                        seed: Math.floor(Math.random() * 100000)
+                    });
+                    
+                    // Show loading message
+                    const inferenceTimeEl = document.getElementById('inference-time');
+                    const nodeBudgetEl = document.getElementById('node-budget');
+                    inferenceTimeEl.textContent = 'Computing...';
+                    nodeBudgetEl.textContent = '-';
                 }
             });
             
             aiStopBtn.addEventListener('click', () => {
                 isAIPlaying = false;
                 updateButtonStates();
+                
+                // Stop replay if running
+                if (replayInterval) {
+                    clearInterval(replayInterval);
+                    replayInterval = null;
+                }
             });
 
             newGameBtn.addEventListener('click', () => {
@@ -302,6 +330,12 @@
             searchDepthInput.addEventListener('input', updateButtonStates);
             
             refreshModelsBtn.addEventListener('click', fetchModels);
+            
+            // Handle playback speed control
+            playbackSpeedSlider.addEventListener('input', (e) => {
+                replaySpeed = parseInt(e.target.value);
+                speedValueEl.textContent = replaySpeed;
+            });
 
             socket.on('new_game_state', (data) => {
                 currentBoardInt = BigInt(data.board);
@@ -325,6 +359,14 @@
                 renderBoard(boardArray);
                 gameScoreEl.textContent = currentScore;
                 gameMaxTileEl.textContent = data.max_tile;
+                
+                // Display inference time and node budget
+                if (data.inference_time_ms !== undefined) {
+                    document.getElementById('inference-time').textContent = data.inference_time_ms.toFixed(1);
+                }
+                if (data.node_budget !== undefined) {
+                    document.getElementById('node-budget').textContent = data.node_budget;
+                }
 
                 if (isGameOver) {
                     isAIPlaying = false;
@@ -339,6 +381,76 @@
                     updateButtonStates(); // AI was stopped manually
                 }
             });
+            
+            // Handle complete game result
+            socket.on('complete_game_result', (data) => {
+                if (!data.success) {
+                    alert('Failed to generate game: ' + data.error);
+                    isAIPlaying = false;
+                    updateButtonStates();
+                    return;
+                }
+                
+                // Store game trace
+                gameTrace = data.trace;
+                currentTraceIndex = 0;
+                
+                // Display time and stats
+                const inferenceTimeEl = document.getElementById('inference-time');
+                const nodeBudgetEl = document.getElementById('node-budget');
+                inferenceTimeEl.textContent = data.time_ms.toFixed(1);
+                nodeBudgetEl.textContent = data.node_budget;
+                
+                // Start replay
+                replayGame();
+            });
+            
+            function replayGame() {
+                if (!gameTrace || currentTraceIndex >= gameTrace.length) {
+                    isAIPlaying = false;
+                    updateButtonStates();
+                    if (gameTrace && currentTraceIndex > 0) {
+                        alert('Game finished! Final score: ' + currentScore);
+                    }
+                    return;
+                }
+                
+                const move = gameTrace[currentTraceIndex];
+                currentTraceIndex++;
+                
+                if (move.type === 'init') {
+                    // Initial board
+                    currentBoardInt = BigInt(move.board);
+                    currentScore = 0;
+                } else if (move.type === 'move') {
+                    // Update board and score
+                    currentBoardInt = BigInt(move.board);
+                    currentScore += move.score;
+                }
+                
+                // Render board
+                const boardArray = int64ToBoardArray(currentBoardInt);
+                renderBoard(boardArray);
+                gameScoreEl.textContent = currentScore;
+                gameMaxTileEl.textContent = getMaxTileFromBoard(boardArray);
+                
+                // Continue replay if AI is still playing
+                if (isAIPlaying) {
+                    replayInterval = setTimeout(replayGame, replaySpeed);
+                }
+            }
+            
+            function getMaxTileFromBoard(boardArray) {
+                let max = 0;
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 4; c++) {
+                        if (boardArray[r][c] > max) {
+                            max = boardArray[r][c];
+                        }
+                    }
+                }
+                return max;
+            }
             
             socket.on('error', (data) => {
                 console.error('Server error:', data.message);

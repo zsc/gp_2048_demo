@@ -196,6 +196,57 @@ let experiment_node_budgets ?(num_games=50) () =
   let filename = Printf.sprintf "node_limited_results_%dgames.txt" num_games in
   let oc = open_out filename in
   Printf.fprintf oc "# Node-Limited Expectimax Results (%d games per budget, %d cores)\n" num_games !num_domains;
+  
+  (* Save some predefined good programs *)
+  let models_dir = "python/models" in
+  if not (Sys.file_exists models_dir) then
+    Unix.mkdir models_dir 0o755;
+  
+  (* Save predefined models with node budgets *)
+  let save_model_json nodes node_budget fitness avg_score avg_max_tile filename =
+    let nodes_array = nodes
+      |> Array.to_list
+      |> List.map (function
+        | Add -> "\"ADD\""
+        | Sub -> "\"SUB\""
+        | Mul -> "\"MUL\""
+        | SafeDiv -> "\"SAFEDIV\""
+        | IfLTE -> "\"IFLTE\""
+        | Constant v -> Printf.sprintf "\"CONST_%.2f\"" v
+        | NumEmptyCells -> "\"EMPTY\""
+        | MaxTileValue -> "\"MAXTILE\""
+        | MonotonicityScore -> "\"MONO\""
+        | SmoothnessScore -> "\"SMOOTH\"")
+      |> String.concat ", "
+    in
+    let json = Printf.sprintf {|{
+  "nodes": [%s],
+  "node_budget_max": %d,
+  "fitness": %.2f,
+  "avg_score": %.2f,
+  "avg_max_tile": %.2f
+}|} nodes_array node_budget fitness avg_score avg_max_tile in
+    let oc = open_out filename in
+    output_string oc json;
+    close_out oc
+  in
+  
+  save_model_json 
+    [| Add; NumEmptyCells; MaxTileValue |]
+    500 5057.0 5057.0 432.0
+    (Filename.concat models_dir "simple_fast.json");
+    
+  save_model_json 
+    [| Add; Mul; MonotonicityScore; SmoothnessScore; NumEmptyCells |]
+    5000 5100.0 5100.0 409.0
+    (Filename.concat models_dir "balanced_best.json");
+    
+  save_model_json 
+    [| Add; Sub; NumEmptyCells; Mul; MaxTileValue; Constant 2.0 |]
+    1000 4844.0 4844.0 409.0
+    (Filename.concat models_dir "high_performance.json");
+  
+  Printf.printf "Saved predefined models to %s\n" models_dir;
   let tm = Unix.localtime (Unix.time ()) in
   Printf.fprintf oc "# Date: %04d-%02d-%02d %02d:%02d:%02d\n\n" 
     (tm.tm_year + 1900) (tm.tm_mon + 1) tm.tm_mday

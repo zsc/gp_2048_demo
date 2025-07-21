@@ -2,6 +2,21 @@
 
 An OCaml implementation of a 2048 game solver using expectimax search and genetic programming, achieving 30-40x performance improvement over Python.
 
+## Web Interface
+
+The project includes a Flask web app with OCaml backend for fast AI inference:
+
+```bash
+# Run the web server
+cd python && python app.py
+# Visit http://localhost:5000
+```
+
+Features:
+- Train GP models via web UI
+- Play 2048 with OCaml-powered AI (30-40x faster than Python)
+- Real-time inference time display
+
 ## Directory Structure
 
 - **lib/** - Core library (game engine, GP trees, expectimax)

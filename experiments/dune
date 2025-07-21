@@ -22,3 +22,8 @@
  (name experiment_node_limited)
  (modules experiment_node_limited)
  (libraries gp_2048_lib unix domainslib))
+
+(executable
+ (name gp_evolution_fast)
+ (modules gp_evolution_fast)
+ (libraries gp_2048_lib unix domainslib))

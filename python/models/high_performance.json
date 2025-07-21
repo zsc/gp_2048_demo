@@ -1,0 +1,7 @@
+{
+  "nodes": ["ADD", "SUB", "EMPTY", "MUL", "MAXTILE", "CONST_2.00"],
+  "node_budget_max": 1000,
+  "fitness": 4844.00,
+  "avg_score": 4844.00,
+  "avg_max_tile": 409.00
+}
