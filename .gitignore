@@ -1,0 +1,9 @@
+*.pyc
+_build/
+*.cmx
+*.cmi
+*.o
+gp_2048
+test_alignment
+.DS_Store
+*.exe

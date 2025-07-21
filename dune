@@ -1,0 +1,14 @@
+(library
+ (name gp_2048_lib)
+ (modules game gp_tree expectimax gp_engine))
+
+(executable
+ (public_name gp_2048)
+ (name main)
+ (modules main)
+ (libraries gp_2048_lib unix))
+
+(test
+ (name test_alignment)
+ (modules test_alignment)
+ (libraries gp_2048_lib unix))
