@@ -1,3 +1,4 @@
 (library
  (name gp_2048_lib)
- (modules game game_fast gp_tree gp_tree_json gp_engine random_tape expectimax_aligned expectimax_memoized))
+ (flags (:standard -w -32))
+ (modules game_fast gp_tree random_tape gp_tree_json gp_engine expectimax_aligned))

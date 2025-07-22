@@ -1,14 +1,14 @@
 (* Expectimax implementation aligned with Python expectimax_python.py *)
 
-open Game
+open Game_fast
 open Gp_tree
 
 (* Player's turn: maximize the score from the next state *)
 let rec max_value board program depth =
   if is_game_over board then
-    eval program board -. 1e6  (* Penalize game over states *)
+    Gp_tree.eval program board -. 1e6  (* Penalize game over states *)
   else if depth = 0 then
-    eval program board
+    Gp_tree.eval program board
   else
     let moves = [
       move_up board;
@@ -21,7 +21,7 @@ let rec max_value board program depth =
       not (Int64.equal board new_board)) moves in
     
     if List.length moved_boards = 0 then
-      eval program board
+      Gp_tree.eval program board
     else
       let utilities = List.map (fun new_board ->
         (* After player moves, it's the computer's turn (chance node) *)
@@ -38,7 +38,7 @@ and expect_value board program depth =
   
   match empty_cells with
   | [] -> max_value board program next_depth
-  | _ when next_depth < 0 -> eval program board
+  | _ when next_depth < 0 -> Gp_tree.eval program board
   | cells ->
     let num_empty = float_of_int (List.length cells) in
     

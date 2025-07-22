@@ -24,5 +24,7 @@
  (modules evaluate_models)
  (libraries gp_2048_lib unix))
 
-
-
+(executable
+ (name beat_simple_fast)
+ (modules beat_simple_fast)
+ (libraries gp_2048_lib unix domainslib))

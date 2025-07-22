@@ -65,7 +65,7 @@ let record_event tape position value =
 
 (* Modified add_random_tile that uses external tape *)
 let add_random_tile_from_tape board tape =
-  let open Game in
+  let open Game_fast in
   let empty_cells = get_empty_cells board in
   match empty_cells with
   | [] -> board
@@ -82,7 +82,7 @@ let add_random_tile_from_tape board tape =
 
 (* Add tile using pre-consumed event *)
 let add_tile_with_event board event =
-  let open Game in
+  let open Game_fast in
   let empty_cells = get_empty_cells board in
   match empty_cells with
   | [] -> board

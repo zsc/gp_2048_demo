@@ -569,3 +569,109 @@ cd python && python app.py
    - 优化进化算法以加快速度
    - 尝试不同的评估函数组合
    - 增加并行度以加速训练
+
+```ocaml
+(* lib/game_fast.mli *)
+type board = int64
+val empty_board : int64
+val row_mask : int64
+val cell_mask : int64
+val get_row : int64 -> int -> int64
+val set_row : int64 -> int -> int64 -> int64
+val get_cell : int64 -> int -> int
+val set_cell : int64 -> int -> int -> int64
+val left_table : int array
+val right_table : int array
+val score_table : int array
+val monotonicity_table : float array
+val smoothness_table : float array
+val load_table_from_file : string -> int array
+val compute_row_monotonicity : int -> float
+val compute_row_smoothness : int -> float
+val init_tables : unit -> unit
+val transpose : int64 -> int64
+val move_left : int64 -> int64
+val move_right : int64 -> int64
+val move_up : int64 -> int64
+val move_down : int64 -> int64
+val get_score_for_move : int64 -> [< `Down | `Left | `Right | `Up ] -> int
+val count_empty_cells : int64 -> int
+val get_empty_cells : int64 -> int list
+val add_random_tile : int64 -> Random.State.t -> int64
+val get_max_tile : int64 -> int
+val is_game_over : Int64.t -> bool
+val monotonicity_score : int64 -> float
+val smoothness_score : int64 -> float
+(* lib/game.mli *)
+type board = int64
+val empty_board : int64
+val row_mask : int64
+val cell_mask : int64
+val get_row : int64 -> int -> int64
+val set_row : int64 -> int -> int64 -> int64
+val get_cell : int64 -> int -> int
+val set_cell : int64 -> int -> int -> int64
+val left_table : int array
+val right_table : int array
+val score_table : int array
+val load_table_from_file : string -> int array
+val init_tables : unit -> unit
+val transpose : int64 -> int64
+val move_left : int64 -> int64
+val move_right : int64 -> int64
+val move_up : int64 -> int64
+val move_down : int64 -> int64
+val get_score_for_move : int64 -> [< `Down | `Left | `Right | `Up ] -> int
+val count_empty_cells : int64 -> int
+val get_empty_cells : int64 -> int list
+val add_random_tile : int64 -> Random.State.t -> int64
+val get_max_tile : int64 -> int
+val is_game_over : Int64.t -> bool
+val monotonicity_score : int64 -> float
+val smoothness_score : int64 -> float
+(* lib/gp_tree.mli *)
+type node =
+    Add
+  | Sub
+  | Mul
+  | SafeDiv
+  | IfLTE
+  | Constant of float
+  | NumEmptyCells
+  | MaxTileValue
+  | MonotonicityScore
+  | SmoothnessScore
+type program = {
+  nodes : node array;
+  mutable fitness : float;
+  mutable games_played : int;
+  mutable avg_score : float;
+  mutable avg_max_tile : float;
+}
+val node_arity : node -> int
+val is_terminal : node -> bool
+val safe_div : float -> float -> float
+val eval_program : program -> int64 -> float
+val eval : program -> int64 -> float
+val random_terminal : Random.State.t -> node
+val random_function : Random.State.t -> node
+val random_tree : Random.State.t -> int -> node list
+val create_random_program : Random.State.t -> int -> program
+val copy_program : program -> program
+val count_nodes_from : int -> node array -> int
+val extract_subtree : node array -> int -> node array
+val crossover : Random.State.t -> program -> program -> program * program
+val mutate : Random.State.t -> program -> float -> int -> program
+val program_to_string : program -> string
+(* lib/random_tape.mli *)
+type random_event = { position : int; value : int; }
+type random_tape = { events : random_event array; mutable index : int; }
+val load_random_tape : string -> random_tape
+val save_random_tape : string -> random_tape -> unit
+val get_next_event : random_tape -> random_event
+val reset_tape : random_tape -> unit
+val create_empty_tape : unit -> random_tape
+val record_event : random_tape -> int -> int -> random_tape
+val add_random_tile_from_tape : int64 -> random_tape -> int64
+val add_tile_with_event : int64 -> random_event -> int64
+```

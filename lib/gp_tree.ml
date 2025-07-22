@@ -33,7 +33,7 @@ let safe_div a b =
   if abs_float b < 0.001 then 1.0 else a /. b
 
 let eval_program program board =
-  let open Game in
+  let open Game_fast in
   let rec eval_node idx =
     if idx >= Array.length program.nodes then
       (0.0, idx)

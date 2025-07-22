@@ -1,4 +1,4 @@
-open Gp_2048_lib.Game
+open Gp_2048_lib.Game_fast
 open Gp_2048_lib.Gp_tree
 open Gp_2048_lib.Expectimax_aligned
 open Gp_2048_lib.Gp_engine
