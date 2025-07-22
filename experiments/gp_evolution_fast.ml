@@ -370,14 +370,31 @@ let () =
   if not (Sys.file_exists models_dir) then
     Unix.mkdir models_dir 0o755;
   
+  (* Parse command line arguments with defaults *)
+  let generations = try int_of_string Sys.argv.(1) with _ -> 30 in
+  let pop_size = try int_of_string Sys.argv.(2) with _ -> 50 in
+  let tournament_size = try int_of_string Sys.argv.(3) with _ -> 5 in
+  let mutation_prob = try float_of_string Sys.argv.(4) with _ -> 0.2 in
+  let crossover_prob = try float_of_string Sys.argv.(5) with _ -> 0.8 in
+  let max_depth = try int_of_string Sys.argv.(6) with _ -> 5 in
+  
+  Printf.printf "Evolution parameters:\n";
+  Printf.printf "  Generations: %d\n" generations;
+  Printf.printf "  Population size: %d\n" pop_size;
+  Printf.printf "  Tournament size: %d\n" tournament_size;
+  Printf.printf "  Mutation probability: %.2f\n" mutation_prob;
+  Printf.printf "  Crossover probability: %.2f\n" crossover_prob;
+  Printf.printf "  Max tree depth: %d\n" max_depth;
+  Printf.printf "\n";
+  
   (* Run evolution *)
   evolve_gp
-    ~generations:30
-    ~pop_size:50
-    ~tournament_size:5
-    ~mutation_prob:0.2
-    ~crossover_prob:0.8
-    ~max_depth:5;
+    ~generations
+    ~pop_size
+    ~tournament_size
+    ~mutation_prob
+    ~crossover_prob
+    ~max_depth;
     
   (* Cleanup *)
   Task.teardown_pool pool

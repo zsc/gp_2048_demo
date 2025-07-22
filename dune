@@ -14,5 +14,15 @@
  (modules inference_cli)
  (libraries gp_2048_lib unix))
 
+(executable
+ (name train_models)
+ (modules train_models)
+ (libraries gp_2048_lib unix))
+
+(executable
+ (name evaluate_models)
+ (modules evaluate_models)
+ (libraries gp_2048_lib unix))
+
 
 
