@@ -456,3 +456,70 @@ cd python && python app.py
    - OCaml 后端一次性计算完整游戏轨迹（< 0.5 秒）
    - 前端按设定速度回放游戏，无需多次调用后端
    - 测试脚本使用 Selenium WebDriver 自动化浏览器操作
+
+## 项目文件结构
+
+### 核心 OCaml 库 (`lib/`)
+- **game.ml** - 游戏引擎核心实现（位操作、移动、评分）
+- **game_fast.ml** - 带查找表优化的游戏引擎（10.7x 性能提升）
+- **gp_tree.ml** - 遗传编程树结构和操作
+- **gp_tree_json.ml** - GP 树的 JSON 序列化/反序列化
+- **gp_engine.ml** - 遗传算法引擎（选择、交叉、变异、进化）
+- **expectimax_aligned.ml** - 与 Python 对齐的 expectimax 算法
+- **expectimax_memoized.ml** - 带记忆化的 expectimax（实验性）
+- **random_tape.ml** - 外部随机数注入（用于对齐测试）
+
+### 主程序
+- **main.ml** - 命令行界面，支持训练和交互式游戏
+- **inference_cli.ml** - 推理命令行工具，支持单步和完整游戏
+
+### 实验脚本 (`experiments/`)
+- **experiment_ocaml_fast.ml** - 基础性能和评估函数对比实验
+- **experiment_node_limited.ml** - 节点限制策略实验（支持多核并行）
+- **experiment_dynamic_depth.ml** - 动态深度分配策略实验
+- **gp_evolution_fast.ml** - 快速 GP 进化（使用所有优化）
+- **gp_evolution_leaderboard.ml** - 带排行榜的 GP 进化
+
+### 基准测试 (`benchmarks/`)
+- **benchmark_comprehensive.ml/py** - 综合性能对比（OCaml vs Python）
+- **benchmark_comparison.ml/py** - 基础操作对比测试
+- **benchmark_eval_lut.ml** - 查找表性能测试
+
+### Python 实现 (`python/`)
+- **game.py** - Python 版游戏引擎（金标准）
+- **gp_engine.py** - Python 版遗传编程引擎
+- **expectimax_python.py** - Python 版 expectimax 算法
+- **app.py** - Flask Web 应用后端
+- **generate_tables.py** - 生成移动操作查找表
+- **generate_random_tape.py** - 生成随机序列文件
+- **templates/index.html** - Web 界面前端
+
+### 模型文件 (`python/models/`)
+- **simple_fast.json** - 简单快速模型（500 节点，平均 5057 分）
+- **balanced_best.json** - 平衡模型（5000 节点，包含平滑度）
+- **high_performance.json** - 高性能模型（1000 节点）
+
+### 测试脚本
+- **test_web_complete_game.py** - Web 界面端到端测试
+- **test_single_game.py** - 单局游戏测试
+- **verify_integration.py** - 集成验证测试
+
+### 文档和结果
+- **README.md** - 项目说明
+- **CLAUDE.md** - 开发文档和进度跟踪（本文档）
+- **results/leaderboard.md** - AI 性能排行榜
+- **node_limited_results_50games.txt** - 50 局游戏实验结果
+
+### 构建配置
+- **dune-project** - Dune 项目配置
+- **dune** - 根目录构建配置
+- **lib/dune** - 库构建配置
+- **experiments/dune** - 实验脚本构建配置
+
+### 关键目录说明
+- `lib/` - 所有核心算法和数据结构
+- `experiments/` - 各种实验和性能测试
+- `benchmarks/` - 性能基准测试
+- `python/` - Python 参考实现和 Web 界面
+- `results/` - 实验结果和排行榜
+- `tests/` - 测试数据和脚本
