@@ -8,11 +8,6 @@
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; background-color: #f4f4f9; color: #333; margin: 0; padding: 20px; }
         .container { max-width: 1200px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         h1, h2 { color: #444; border-bottom: 2px solid #eee; padding-bottom: 10px; }
-        .tabs { display: flex; border-bottom: 1px solid #ccc; margin-bottom: 20px; }
-        .tab-link { padding: 10px 20px; cursor: pointer; border: 1px solid transparent; border-bottom: none; margin-bottom: -1px; }
-        .tab-link.active { background: white; border-color: #ccc; border-bottom-color: white; border-radius: 4px 4px 0 0; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
         .grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
@@ -36,51 +31,10 @@
 </head>
 <body>
     <div class="container">
-        <h1>Genetic Programming for 2048</h1>
-        
-        <div class="tabs">
-            <div class="tab-link active" onclick="openTab(event, 'Train')">Train</div>
-            <div class="tab-link" onclick="openTab(event, 'Test')">Test</div>
-        </div>
+        <h1>Genetic Programming for 2048 - AI Game Interface</h1>
 
-        <!-- Train Tab -->
-        <div id="Train" class="tab-content active">
-            <div class="grid-container">
-                <div>
-                    <h2>Hyperparameters</h2>
-                    <form id="gp-params">
-                        <div class="form-group"><label for="population_size">Population Size:</label><input id="population_size" type="number" value="50"></div>
-                        <div class="form-group"><label for="generations">Generations:</label><input id="generations" type="number" value="30"></div>
-                        <div class="form-group"><label for="crossover_rate">Crossover Rate:</label><input id="crossover_rate" type="number" step="0.01" min="0" max="1" value="0.8"></div>
-                        <div class="form-group"><label for="mutation_rate">Mutation Rate:</label><input id="mutation_rate" type="number" step="0.01" min="0" max="1" value="0.15"></div>
-                        <div class="form-group"><label for="tournament_size">Tournament Size:</label><input id="tournament_size" type="number" value="5"></div>
-                        <div class="form-group"><label for="max_init_depth">Max Initial Depth:</label><input id="max_init_depth" type="number" value="4"></div>
-                        <div class="form-group"><label for="max_depth">Max Depth:</label><input id="max_depth" type="number" value="8"></div>
-                        <div class="form-group"><label for="elitism_size">Elitism Size:</label><input id="elitism_size" type="number" value="2"></div>
-                        <div class="form-group"><label for="games_per_individual">Games per Individual:</label><input id="games_per_individual" type="number" value="3"></div>
-                        <div class="form-group"><label for="fitness_search_depth">Fitness Expectimax Depth:</label><input id="fitness_search_depth" type="number" value="1" min="0" max="3"></div>
-                    </form>
-                    <button id="start-btn">Start Training</button>
-                    <button id="stop-btn" disabled>Stop Training</button>
-                    <p>Open <a href="http://localhost:6006/" target="_blank">TensorBoard</a> to see detailed graphs. (Run `tensorboard --logdir runs` in your terminal)</p>
-                </div>
-                <div>
-                    <h2>Training Log</h2>
-                    <div id="log-area">Welcome! Set parameters and click "Start Training".</div>
-                    <div id="stats-area">
-                        <strong>Current Stats:</strong>
-                        <p>Generation: <span id="stat-gen">N/A</span></p>
-                        <p>Best Fitness: <span id="stat-best-fit">N/A</span> | Avg Fitness: <span id="stat-avg-fit">N/A</span></p>
-                        <p>Best Score: <span id="stat-best-score">N/A</span> | Avg Score: <span id="stat-avg-score">N/A</span></p>
-                        <p>Best Max Tile: <span id="stat-max-tile">N/A</span></p>
-                        <p>Best Program: <span id="stat-best-prog">N/A</span></p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Test Tab -->
-        <div id="Test" class="tab-content">
+        <!-- Game Interface -->
+        <div id="GameInterface" style="display: block;">
             <div class="grid-container">
                 <div>
                     <h2>Game Board</h2>
@@ -113,75 +67,19 @@
 
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script>
+        // Make these variables global for testing
+        window.currentBoardInt = BigInt(0);
+        window.currentScore = 0;
+        window.isGameOver = false;
+        
         document.addEventListener('DOMContentLoaded', function () {
             const socket = io();
-            let currentBoardInt = BigInt(0);
-            let currentScore = 0;
+            let currentBoardInt = window.currentBoardInt;
+            let currentScore = window.currentScore;
             let isAIPlaying = false;
-            let isGameOver = true;
+            let isGameOver = window.isGameOver;
 
-            // --- General UI ---
-            function openTab(evt, tabName) {
-                let i, tabcontent, tablinks;
-                tabcontent = document.getElementsByClassName("tab-content");
-                for (i = 0; i < tabcontent.length; i++) {
-                    tabcontent[i].style.display = "none";
-                }
-                tablinks = document.getElementsByClassName("tab-link");
-                for (i = 0; i < tablinks.length; i++) {
-                    tablinks[i].className = tablinks[i].className.replace(" active", "");
-                }
-                document.getElementById(tabName).style.display = "block";
-                evt.currentTarget.className += " active";
-            }
-            window.openTab = openTab; // Make it globally accessible for inline onclick
-
-            // --- Train Tab Logic ---
-            const startBtn = document.getElementById('start-btn');
-            const stopBtn = document.getElementById('stop-btn');
-            const logArea = document.getElementById('log-area');
-
-            startBtn.addEventListener('click', () => {
-                const params = {};
-                const inputs = document.querySelectorAll('#gp-params input');
-                inputs.forEach(input => { params[input.id] = input.value; });
-
-                socket.emit('start_training', params);
-                logArea.textContent = 'Starting training... please wait.\n';
-                startBtn.disabled = true;
-                stopBtn.disabled = false;
-            });
-
-            stopBtn.addEventListener('click', () => {
-                socket.emit('stop_training');
-                stopBtn.disabled = true;
-            });
-
-            socket.on('training_update', (data) => {
-                if (data.log) {
-                    logArea.textContent += data.log + '\n';
-                    logArea.scrollTop = logArea.scrollHeight;
-                }
-                if (data.stats) {
-                    document.getElementById('stat-gen').textContent = `${data.stats.generation} / ${data.stats.total_generations}`;
-                    document.getElementById('stat-best-fit').textContent = data.stats.best_fitness;
-                    document.getElementById('stat-avg-fit').textContent = data.stats.avg_fitness;
-                    document.getElementById('stat-best-score').textContent = data.stats.best_score;
-                    document.getElementById('stat-avg-score').textContent = data.stats.avg_score;
-                    document.getElementById('stat-max-tile').textContent = data.stats.best_max_tile;
-                    document.getElementById('stat-best-prog').textContent = data.stats.best_program_str;
-                }
-            });
-
-            socket.on('training_finished', (data) => {
-                startBtn.disabled = false;
-                stopBtn.disabled = true;
-                if(data.new_model) {
-                    fetchModels(); // Refresh model list
-                }
-            });
-
-            // --- Test Tab Logic ---
+            // --- Game Interface Logic ---
             const modelSelector = document.getElementById('model-selector');
             const refreshModelsBtn = document.getElementById('refresh-models-btn');
             const newGameBtn = document.getElementById('new-game-btn');
@@ -341,6 +239,10 @@
                 currentBoardInt = BigInt(data.board);
                 currentScore = data.score;
                 isGameOver = data.is_over;
+                // Update global variables for testing
+                window.currentBoardInt = currentBoardInt;
+                window.currentScore = currentScore;
+                window.isGameOver = isGameOver;
                 // Defer DOM updates to avoid blocking
                 requestAnimationFrame(() => {
                     const boardArray = int64ToBoardArray(currentBoardInt);
@@ -459,6 +361,13 @@
                 updateButtonStates();
             });
 
+            // Socket connection handler
+            socket.on('connect', () => {
+                console.log('Connected to server');
+                // Request new game on connection
+                socket.emit('request_new_game');
+            });
+            
             // Initial setup
             fetchModels();
             renderBoard(Array(4).fill(0).map(() => Array(4).fill(0))); // Render empty board initially
