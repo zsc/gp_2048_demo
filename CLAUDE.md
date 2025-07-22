@@ -601,6 +601,24 @@ cd python && python app.py
    - 设置 max_moves = 10000 允许游戏玩到结束
    - 使用 6 核并行评估，速度提升 ~6 倍
 
+### simple_fast 评估函数测试结果
+
+`Add(NumEmptyCells, MaxTileValue)` 是最简单有效的评估函数，在不同配置下的表现：
+
+1. **固定深度 10，不同节点预算**（max_moves = 1,000,000）
+   - 100 节点: 15,263 平均分（10.1 games/sec）
+   - 500 节点: 21,557 平均分（2.0 games/sec）
+   - 1000 节点: 24,789 平均分（0.7 games/sec）
+   - 1500 节点: 26,593 平均分（0.3 games/sec）- **最优**
+   - 2000 节点: 24,654 平均分（0.2 games/sec）
+
+2. **动态深度 (12/8/4/4)，不同节点预算**
+   - 100 节点: 20,964 平均分（16.3 games/sec）- 比固定深度提升 37%
+   - 500 节点: 23,729 平均分（2.7 games/sec）- 比固定深度提升 10%
+   - 1000 节点: 20,050 平均分（1.4 games/sec）
+   - 1500 节点: 19,751 平均分（0.9 games/sec）
+   - 2000 节点: 19,035 平均分（0.6 games/sec）
+
 ### 动态深度实验（2025-07-22）
 
 通过修改 `test_simple_fast_nodes.ml` 支持动态深度搜索，进行了详细的消融研究：
@@ -635,6 +653,21 @@ cd python && python app.py
      else if empty_cells >= t3 then 3
      else max_depth
    ```
+
+### 评估函数性能对比总结
+
+1. **simple_fast**: `Add(NumEmptyCells, MaxTileValue)`
+   - 最佳配置：1500 节点，固定深度 10 → **26,593 平均分**
+   - 简单高效，是所有复杂策略的基准
+
+2. **champion_gen15**: 进化得到的复杂函数
+   - 结构：`((NumEmptyCells + (NumEmptyCells + MaxTileValue)) + (MaxTileValue × ...))`
+   - 在限制条件下（较少游戏数）达到 7,529 平均分
+   - 需要在相同条件下重新评估以公平对比
+
+3. **动态深度优化后的 simple_fast**
+   - 最佳配置：500 节点，动态深度 (14/8/4/4) → **23,729 平均分**
+   - 在计算资源受限时表现优异
 
 ```ocaml
 (* lib/game_fast.mli *)
