@@ -27,3 +27,8 @@
  (name gp_evolution_fast)
  (modules gp_evolution_fast)
  (libraries gp_2048_lib unix domainslib))
+
+(executable
+ (name test_simple_fast_nodes)
+ (modules test_simple_fast_nodes)
+ (libraries gp_2048_lib unix domainslib))
