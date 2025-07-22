@@ -356,7 +356,7 @@ def run_training(params, sid):
 @socketio.on('request_new_game')
 def handle_new_game():
     """Start a new game"""
-    board = Game2048.new_game()
+    board = Game2048.reset_board()
     emit('new_game_state', {
         'board': str(board),
         'score': 0,
