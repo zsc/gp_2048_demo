@@ -1,0 +1,9 @@
+2048 Model Evaluation Results
+Date: 2025-07-22 01:05:59 UTC
+Games per model: 50
+
+Model                        Avg Score    Max Score     Avg Tile    Best Tile
+-------------------------------------------------------------------------------------
+simple_fast.json                  7356         9368          620         1024
+high_performance.json             7165         9364          543         1024
+balanced_best.json                2594         7116          204          512

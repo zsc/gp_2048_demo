@@ -1,0 +1,56 @@
+=== Evolution to Beat simple_fast (7356) ===
+Using smart initial population and focused selection
+Using 6 CPU cores for parallel evaluation
+
+
+Generation 1/30 at 02:48:40
+  Evaluated 10/60 (16.7%)  Evaluated 20/60 (33.3%)  Evaluated 30/60 (50.0%)  Evaluated 40/60 (66.7%)  Evaluated 50/60 (83.3%)  Evaluated 60/60 (100.0%)
+  Evaluation complete in 18.4s (3.3 ind/sec)
+
+  Best fitness: 266869 (est. score: 267)
+
+Generation 2/30 at 02:48:58
+  Evaluated 10/60 (16.7%)  Evaluated 20/60 (33.3%)  Evaluated 30/60 (50.0%)  Evaluated 40/60 (66.7%)  Evaluated 50/60 (83.3%)  Evaluated 60/60 (100.0%)
+  Evaluation complete in 27.7s (2.2 ind/sec)
+
+  Best fitness: 266877 (est. score: 267)
+
+Generation 3/30 at 02:49:26
+  Evaluated 10/60 (16.7%)  Evaluated 20/60 (33.3%)  Evaluated 30/60 (50.0%)  Evaluated 40/60 (66.7%)  Evaluated 50/60 (83.3%)  Evaluated 60/60 (100.0%)
+  Evaluation complete in 11.5s (5.2 ind/sec)
+
+  Best fitness: 266821 (est. score: 267)
+
+Generation 4/30 at 02:49:37
+  Evaluated 10/60 (16.7%)  Evaluated 20/60 (33.3%)  Evaluated 30/60 (50.0%)  Evaluated 40/60 (66.7%)  Evaluated 50/60 (83.3%)  Evaluated 60/60 (100.0%)
+  Evaluation complete in 5.4s (11.2 ind/sec)
+
+  Best fitness: 266821 (est. score: 267)
+
+Generation 5/30 at 02:49:43
+  Evaluated 10/60 (16.7%)  Evaluated 20/60 (33.3%)  Evaluated 30/60 (50.0%)  Evaluated 40/60 (66.7%)  Evaluated 50/60 (83.3%)  Evaluated 60/60 (100.0%)
+  Evaluation complete in 5.5s (10.9 ind/sec)
+
+  Best fitness: 266844 (est. score: 267)
+  💾 Saved checkpoint to python/models/checkpoint_gen5.json
+  Thorough evaluation of best candidate...
+  20-game test results:
+    Average score: 7171 ❌
+    Max score: 9356
+    Average max tile: 563 (2^9.1)
+    Program: [Add, NumEmptyCells, NumEmptyCells]
+
+Generation 6/30 at 02:49:49
+  Evaluated 10/60 (16.7%)  Evaluated 20/60 (33.3%)  Evaluated 30/60 (50.0%)  Evaluated 40/60 (66.7%)  Evaluated 50/60 (83.3%)  Evaluated 60/60 (100.0%)
+  Evaluation complete in 27.5s (2.2 ind/sec)
+
+  Best fitness: 266867 (est. score: 267)
+
+Generation 7/30 at 02:50:16
+  Evaluated 10/60 (16.7%)  Evaluated 20/60 (33.3%)  Evaluated 30/60 (50.0%)  Evaluated 40/60 (66.7%)  Evaluated 50/60 (83.3%)  Evaluated 60/60 (100.0%)
+  Evaluation complete in 15.5s (3.9 ind/sec)
+
+  Best fitness: 266851 (est. score: 267)
+
+Generation 8/30 at 02:50:32
+  Evaluated 10/60 (16.7%)  Evaluated 20/60 (33.3%)  Evaluated 30/60 (50.0%)  Evaluated 40/60 (66.7%)  Evaluated 50/60 (83.3%)

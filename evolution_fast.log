@@ -1,0 +1,17 @@
+Evolution parameters:
+  Generations: 10
+  Population size: 30
+  Tournament size: 5
+  Mutation probability: 0.20
+  Crossover probability: 0.80
+  Max tree depth: 5
+
+Starting GP evolution with 6 cores...
+Population: 30, Generations: 10
+
+Generation 1/10
+  Evaluating population...
+  Best: fitness=217641.44, score=5305, max_tile=461, strategy=Fixed_1000
+  Program: [NumEmptyCells]
+Generation 2/10
+  Evaluating population...

@@ -1,0 +1,35 @@
+(executable
+ (public_name gp_2048)
+ (name main)
+ (modules main)
+ (libraries gp_2048_lib unix))
+
+(executable
+ (name test_score_based)
+ (modules test_score_based)
+ (libraries gp_2048_lib unix))
+
+(executable
+ (name inference_cli)
+ (modules inference_cli)
+ (libraries gp_2048_lib unix str))
+
+(executable
+ (name train_models)
+ (modules train_models)
+ (libraries gp_2048_lib unix))
+
+(executable
+ (name evaluate_models)
+ (modules evaluate_models)
+ (libraries gp_2048_lib unix))
+
+(executable
+ (name beat_simple_fast)
+ (modules beat_simple_fast)
+ (libraries gp_2048_lib unix domainslib))
+
+(executable
+ (name test_num_empty_cells)
+ (modules test_num_empty_cells)
+ (libraries gp_2048_lib unix))

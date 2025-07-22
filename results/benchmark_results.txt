@@ -1,0 +1,128 @@
+COMPREHENSIVE PERFORMANCE COMPARISON: Python vs OCaml
+============================================================
+
+PYTHON BENCHMARK RESULTS
+============================================================
+
+1. BOARD OPERATIONS BENCHMARK
+==================================================
+  Board 0000000000000000: 0.073s for 40000 moves
+  Board 0000000000001234: 0.090s for 40000 moves
+  Board 1234567890abcdef: 0.103s for 40000 moves
+  Total: 0.266s for 120000 moves
+  Speed: 450347 moves/sec
+
+2. GP TREE EVALUATION BENCHMARK
+==================================================
+  Board 0000000000000000: 0.003s for 1000 evaluations
+  Board 0000000000001234: 0.003s for 1000 evaluations
+  Board 1234567890abcdef: 0.003s for 1000 evaluations
+  Total: 0.009s for 3000 evaluations
+  Speed: 342206 evals/sec
+
+3. EXPECTIMAX SEARCH BENCHMARK
+==================================================
+
+  Depth 1:
+    Board 0000000000000000: 0.000s
+    Board 0000000000001234: 0.001s
+    Board 1234567890abcdef: 0.001s
+    Total: 0.002s for 30 searches
+    Speed: 14324.8 searches/sec
+
+  Depth 2:
+    Board 0000000000000000: 0.000s
+    Board 0000000000001234: 0.078s
+    Board 1234567890abcdef: 0.002s
+    Total: 0.079s for 30 searches
+    Speed: 378.2 searches/sec
+
+  Depth 3:
+    Board 0000000000000000: 0.000s
+    Board 0000000000001234: 6.091s
+    Board 1234567890abcdef: 0.004s
+    Total: 6.095s for 30 searches
+    Speed: 4.9 searches/sec
+
+4. FULL GAME BENCHMARK
+==================================================
+
+  Depth 1:
+    Time: 0.281s for 10 games
+    Speed: 35.5 games/sec
+    Avg score: 935
+    Avg moves: 99
+
+  Depth 2:
+    Time: 23.024s for 10 games
+    Speed: 0.4 games/sec
+    Avg score: 1102
+    Avg moves: 100
+
+5. GP EVOLUTION BENCHMARK
+==================================================
+  (Skipped - would require full GP engine setup)
+
+============================================================
+OCAML BENCHMARK RESULTS
+============================================================
+
+1. BOARD OPERATIONS BENCHMARK
+==================================================
+  Board 0000000000000000: 0.001s for 40000 moves
+  Board 0000000000001234: 0.000s for 40000 moves
+  Board 1234567890abcdef: 0.000s for 40000 moves
+  Total: 0.001s for 120000 moves
+  Speed: 85120325 moves/sec
+
+2. GP TREE EVALUATION BENCHMARK
+==================================================
+  Board 0000000000000000: 0.004s for 1000 evaluations
+  Board 0000000000001234: 0.004s for 1000 evaluations
+  Board 1234567890abcdef: 0.004s for 1000 evaluations
+  Total: 0.013s for 3000 evaluations
+  Speed: 232849 evals/sec
+
+3. EXPECTIMAX SEARCH BENCHMARK
+==================================================
+
+  Depth 1:
+    Board 0000000000000000: 0.000s
+    Board 0000000000001234: 0.000s
+    Board 1234567890abcdef: 0.000s
+    Total: 0.000s for 30 searches
+    Speed: 524288.0 searches/sec
+
+  Depth 2:
+    Board 0000000000000000: 0.000s
+    Board 0000000000001234: 0.002s
+    Board 1234567890abcdef: 0.000s
+    Total: 0.002s for 30 searches
+    Speed: 14051.3 searches/sec
+
+  Depth 3:
+    Board 0000000000000000: 0.000s
+    Board 0000000000001234: 0.180s
+    Board 1234567890abcdef: 0.000s
+    Total: 0.180s for 30 searches
+    Speed: 167.0 searches/sec
+
+4. FULL GAME BENCHMARK
+==================================================
+
+  Depth 1:
+    Time: 0.009s for 10 games
+    Speed: 1129.0 games/sec
+    Avg score: 974
+    Avg moves: 99
+
+  Depth 2:
+    Time: 0.638s for 10 games
+    Speed: 15.7 games/sec
+    Avg score: 1066
+    Avg moves: 100
+
+5. GP EVOLUTION BENCHMARK
+==================================================
+  (Skipped - would require full GP engine setup)
+

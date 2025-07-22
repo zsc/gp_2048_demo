@@ -1,0 +1,25 @@
+=== Evolution to Beat simple_fast (7356) ===
+Using smart initial population and focused selection
+Using 6 CPU cores for parallel evaluation
+
+
+Generation 1/30 at 02:46:00
+  Evaluated 10/60 (16.7%)  Evaluated 20/60 (33.3%)  Evaluated 30/60 (50.0%)  Evaluated 40/60 (66.7%)  Evaluated 50/60 (83.3%)  Evaluated 60/60 (100.0%)
+  Evaluation complete in 25.8s (2.3 ind/sec)
+
+  Best fitness: 266869 (est. score: 267)
+
+Generation 2/30 at 02:46:26
+  Evaluated 10/60 (16.7%)  Evaluated 20/60 (33.3%)  Evaluated 30/60 (50.0%)  Evaluated 40/60 (66.7%)  Evaluated 50/60 (83.3%)  Evaluated 60/60 (100.0%)
+  Evaluation complete in 18.9s (3.2 ind/sec)
+
+  Best fitness: 266851 (est. score: 267)
+
+Generation 3/30 at 02:46:45
+  Evaluated 10/60 (16.7%)  Evaluated 20/60 (33.3%)  Evaluated 30/60 (50.0%)  Evaluated 40/60 (66.7%)  Evaluated 50/60 (83.3%)  Evaluated 60/60 (100.0%)
+  Evaluation complete in 44.5s (1.3 ind/sec)
+
+  Best fitness: 266807 (est. score: 267)
+
+Generation 4/30 at 02:47:29
+  Evaluated 10/60 (16.7%)  Evaluated 20/60 (33.3%)  Evaluated 30/60 (50.0%)  Evaluated 40/60 (66.7%)  Evaluated 50/60 (83.3%)

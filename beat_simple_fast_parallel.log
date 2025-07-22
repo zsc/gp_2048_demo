@@ -1,0 +1,5 @@
+File "beat_simple_fast.ml", line 122, characters 12-31:
+122 |             [(score, max_tile)]
+                  ^^^^^^^^^^^^^^^^^^^
+Error: This expression should not be a list literal, the expected type is
+       "reduce:'a -> 'b"
