@@ -201,11 +201,14 @@ let () =
   (* Check for --play-game flag *)
   if Array.length Sys.argv >= 2 && Sys.argv.(1) = "--play-game" then begin
     (* Play complete game mode *)
-    let model_file, seed = 
+    let model_file, seed, override_budget = 
       if Array.length Sys.argv >= 3 then
-        (Sys.argv.(2), if Array.length Sys.argv >= 4 then int_of_string Sys.argv.(3) else 42)
+        let file = Sys.argv.(2) in
+        let s = if Array.length Sys.argv >= 4 then int_of_string Sys.argv.(3) else 42 in
+        let b = if Array.length Sys.argv >= 5 then Some (int_of_string Sys.argv.(4)) else None in
+        (file, s, b)
       else
-        ("", 42)
+        ("", 42, None)
     in
     
     (* Load program and node budget *)
@@ -216,12 +219,15 @@ let () =
           let json_str = really_input_string ic (in_channel_length ic) in
           close_in ic;
           let program = load_program_from_json json_str in
-          let budget = parse_node_budget json_str in
+          let budget = match override_budget with
+            | Some b -> b  (* Use override if provided *)
+            | None -> parse_node_budget json_str  (* Otherwise use model's default *)
+          in
           (program, budget)
         with _ ->
-          (default_program, default_node_budget)
+          (default_program, match override_budget with Some b -> b | None -> default_node_budget)
       else
-        (default_program, default_node_budget)
+        (default_program, match override_budget with Some b -> b | None -> default_node_budget)
     in
     
     (* Play game *)

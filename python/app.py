@@ -417,6 +417,7 @@ def handle_complete_game(data):
     try:
         model_name = data.get('model', '')
         seed = data.get('seed', random.randint(1, 100000))
+        node_budget = data.get('node_budget', 500)  # Default to 500 if not specified
         
         # Build command
         cmd = [OCAML_INFERENCE_PATH, '--play-game']
@@ -425,6 +426,7 @@ def handle_complete_game(data):
             if os.path.exists(model_path):
                 cmd.append(model_path)
         cmd.append(str(seed))
+        cmd.append(str(node_budget))
         
         # Call OCaml to play complete game
         result = subprocess.run(

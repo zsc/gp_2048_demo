@@ -51,8 +51,14 @@
                         <button id="refresh-models-btn" style="margin-top: 5px;">Refresh List</button>
                     </div>
                     <div class="form-group">
-                        <label for="search-depth">Expectimax Search Depth:</label>
-                        <input id="search-depth" type="number" value="2" min="1" max="5">
+                        <label for="node-budget">Node Budget:</label>
+                        <select id="node-budget-selector">
+                            <option value="100">100 (Fastest)</option>
+                            <option value="500" selected>500 (Fast)</option>
+                            <option value="1000">1000 (Balanced)</option>
+                            <option value="1500">1500 (Best Performance)</option>
+                            <option value="2000">2000 (Slow)</option>
+                        </select>
                     </div>
                     <button id="new-game-btn">New Game</button>
                     <button id="ai-play-btn" disabled>Let AI Play</button>
@@ -86,7 +92,7 @@
             const aiPlayBtn = document.getElementById('ai-play-btn');
             const aiStopBtn = document.getElementById('ai-stop-btn');
             const boardContainer = document.getElementById('board-container');
-            const searchDepthInput = document.getElementById('search-depth');
+            const nodeBudgetSelector = document.getElementById('node-budget-selector');
             const gameScoreEl = document.getElementById('game-score');
             const gameMaxTileEl = document.getElementById('game-max-tile');
             const playbackSpeedSlider = document.getElementById('playback-speed');
@@ -147,7 +153,6 @@
 
             function updateButtonStates() {
                 const modelSelected = modelSelector.value !== "";
-                const depthValid = searchDepthInput && parseInt(searchDepthInput.value, 10) > 0;
 
                 if (isAIPlaying) {
                     aiPlayBtn.disabled = true;
@@ -156,15 +161,15 @@
                     newGameBtn.disabled = true;
                     modelSelector.disabled = true;
                     refreshModelsBtn.disabled = true;
-                    searchDepthInput.disabled = true;
+                    nodeBudgetSelector.disabled = true;
                 } else {
-                    aiPlayBtn.disabled = isGameOver || !modelSelected || !depthValid;
+                    aiPlayBtn.disabled = isGameOver || !modelSelected;
                     aiStopBtn.disabled = true;
                     aiStopBtn.style.display = 'none';
                     newGameBtn.disabled = false;
                     modelSelector.disabled = false;
                     refreshModelsBtn.disabled = false;
-                    searchDepthInput.disabled = false;
+                    nodeBudgetSelector.disabled = false;
                 }
             }
 
@@ -176,8 +181,7 @@
                 }
                 socket.emit('request_next_move', {
                     board: currentBoardInt.toString(),
-                    model: modelSelector.value,
-                    search_depth: parseInt(searchDepthInput.value, 10) || 2
+                    model: modelSelector.value
                 });
             }
 
@@ -195,7 +199,8 @@
                     // Request complete game from OCaml
                     socket.emit('request_complete_game', {
                         model: modelSelector.value,
-                        seed: Math.floor(Math.random() * 100000)
+                        seed: Math.floor(Math.random() * 100000),
+                        node_budget: parseInt(nodeBudgetSelector.value)
                     });
                     
                     // Show loading message
@@ -225,7 +230,6 @@
             modelSelector.addEventListener('change', () => {
                 updateButtonStates();
             });
-            searchDepthInput.addEventListener('input', updateButtonStates);
             
             refreshModelsBtn.addEventListener('click', fetchModels);
             
