@@ -1,0 +1,10 @@
+{
+  "nodes": ["ADD", "ADD", "EMPTY", "ADD", "EMPTY", "MAXTILE", "MUL", "MAXTILE", "ADD", "ADD", "MUL", "MAXTILE", "CONST_2.00", "EMPTY", "MUL", "MAXTILE", "CONST_2.00"],
+  "node_budget_max": 500,
+  "description": "Evolution champion - beat simple_fast!",
+  "generation": 15,
+  "avg_score": 7528.60,
+  "max_score": 9292,
+  "avg_max_tile": 588.80,
+  "fitness": 354214.04
+}

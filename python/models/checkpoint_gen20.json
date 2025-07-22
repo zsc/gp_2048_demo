@@ -1,0 +1,7 @@
+{
+  "nodes": ["ADD", "ADD", "MAXTILE", "EMPTY", "MUL", "MAXTILE", "EMPTY"],
+  "node_budget_max": 500,
+  "generation": 20,
+  "fitness": 266854.67,
+  "avg_score_estimate": 266.85
+}

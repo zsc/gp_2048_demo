@@ -1,0 +1,276 @@
+open Gp_2048_lib.Game_fast
+open Gp_2048_lib.Gp_tree
+open Domainslib
+
+(* Global domain pool - default to 6 cores *)
+let num_domains = ref 6
+let pool = ref None
+
+let get_pool () =
+  match !pool with
+  | Some p -> p
+  | None ->
+    let p = Task.setup_pool ~num_domains:!num_domains () in
+    pool := Some p;
+    p
+
+(* Node-limited expectimax search - copied from experiment_node_limited.ml *)
+type search_control = {
+  mutable nodes_remaining: int;
+  mutable max_depth_reached: int;
+}
+
+let rec max_value_limited board program depth control =
+  if control.nodes_remaining <= 0 then
+    eval_program program board
+  else begin
+    control.nodes_remaining <- control.nodes_remaining - 1;
+    control.max_depth_reached <- max control.max_depth_reached depth;
+    
+    if is_game_over board then
+      eval_program program board -. 1000000.0
+    else if depth = 0 then
+      eval_program program board
+    else
+      let moves = [`Up; `Down; `Left; `Right] in
+      let valid_moves = List.filter (fun dir ->
+        let new_board = match dir with
+          | `Up -> move_up board
+          | `Down -> move_down board
+          | `Left -> move_left board
+          | `Right -> move_right board
+        in
+        not (Int64.equal board new_board)
+      ) moves in
+      
+      if valid_moves = [] then
+        eval_program program board -. 1000000.0
+      else
+        List.fold_left (fun best_value dir ->
+          let new_board = match dir with
+            | `Up -> move_up board
+            | `Down -> move_down board
+            | `Left -> move_left board
+            | `Right -> move_right board
+          in
+          let value = expect_value_limited new_board program depth control in
+          max best_value value
+        ) neg_infinity valid_moves
+  end
+
+and expect_value_limited board program depth control =
+  if control.nodes_remaining <= 0 then
+    eval_program program board
+  else begin
+    control.nodes_remaining <- control.nodes_remaining - 1;
+    
+    let empty_cells = get_empty_cells board in
+    let next_depth = depth - 1 in
+    
+    match empty_cells with
+    | [] -> max_value_limited board program next_depth control
+    | _ when next_depth < 0 -> eval_program program board
+    | cells ->
+      let num_empty = float_of_int (List.length cells) in
+      let nodes_per_spawn = max 1 (control.nodes_remaining / (List.length cells * 2)) in
+      
+      let sum_score_2 = List.fold_left (fun acc cell_idx ->
+        let board_with_2 = set_cell board cell_idx 1 in
+        let local_control = { control with nodes_remaining = nodes_per_spawn } in
+        acc +. max_value_limited board_with_2 program next_depth local_control
+      ) 0.0 cells in
+      
+      let sum_score_4 = List.fold_left (fun acc cell_idx ->
+        let board_with_4 = set_cell board cell_idx 2 in
+        let local_control = { control with nodes_remaining = nodes_per_spawn } in
+        acc +. max_value_limited board_with_4 program next_depth local_control
+      ) 0.0 cells in
+      
+      (0.9 *. sum_score_2 +. 0.1 *. sum_score_4) /. num_empty
+  end
+
+let get_best_move_limited board program node_budget =
+  let moves = [`Up; `Down; `Left; `Right] in
+  let valid_moves = List.filter (fun dir ->
+    let new_board = match dir with
+      | `Up -> move_up board
+      | `Down -> move_down board
+      | `Left -> move_left board
+      | `Right -> move_right board
+    in
+    not (Int64.equal board new_board)
+  ) moves in
+  
+  match valid_moves with
+  | [] -> None
+  | _ ->
+    let nodes_per_move = node_budget / List.length valid_moves in
+    
+    (* Use parallel evaluation only if enough work per move *)
+    let move_values = 
+      if nodes_per_move >= 1000 && !num_domains > 1 then
+        (* Parallel evaluation of moves *)
+        let pool = get_pool () in
+        Task.run pool (fun () ->
+          let results = Array.make (List.length valid_moves) (List.hd valid_moves, neg_infinity, 0) in
+          let valid_moves_arr = Array.of_list valid_moves in
+          
+          Task.parallel_for pool ~start:0 ~finish:(Array.length valid_moves_arr - 1) 
+            ~body:(fun i ->
+              let dir = valid_moves_arr.(i) in
+              let new_board = match dir with
+                | `Up -> move_up board
+                | `Down -> move_down board
+                | `Left -> move_left board
+                | `Right -> move_right board
+              in
+              let control = { nodes_remaining = nodes_per_move; max_depth_reached = 0 } in
+              let value = expect_value_limited new_board program 10 control in
+              results.(i) <- (dir, value, control.max_depth_reached)
+            );
+          Array.to_list results
+        )
+      else
+        (* Sequential evaluation for small node budgets *)
+        List.map (fun dir ->
+          let new_board = match dir with
+            | `Up -> move_up board
+            | `Down -> move_down board
+            | `Left -> move_left board
+            | `Right -> move_right board
+          in
+          let control = { nodes_remaining = nodes_per_move; max_depth_reached = 0 } in
+          let value = expect_value_limited new_board program 10 control in
+          (dir, value, control.max_depth_reached)
+        ) valid_moves
+    in
+    
+    let best_move = List.fold_left (fun (best_dir, best_value, best_depth) (dir, value, depth) ->
+      if value > best_value then (dir, value, depth) else (best_dir, best_value, best_depth)
+    ) (List.hd move_values) (List.tl move_values) in
+    
+    Some (match best_move with (dir, _, depth) -> (dir, depth))
+
+(* Test simple_fast with different node budgets *)
+let test_simple_fast_budgets ~num_games =
+  Printf.printf "=== Testing simple_fast (ADD EMPTY MAXTILE) with different node budgets ===\n";
+  Printf.printf "Using %d CPU cores for parallel evaluation\n" !num_domains;
+  Printf.printf "Playing %d games per configuration\n\n" num_games;
+  flush stdout;
+  
+  let simple_fast = {
+    nodes = [| Add; NumEmptyCells; MaxTileValue |];
+    fitness = 0.0;
+    games_played = 0;
+    avg_score = 0.0;
+    avg_max_tile = 0.0;
+  } in
+  
+  (* Test these node budgets *)
+  let budgets = [100; 500; 1000; 1500; 2000] in
+  
+  Printf.printf "Budget | Avg Score | Std Dev | Max Score | Min Score | Avg Tile | Max Tile | Games/sec\n";
+  Printf.printf "-------|-----------|---------|-----------|-----------|----------|----------|----------\n";
+  
+  List.iter (fun budget ->
+    let start_time = Unix.gettimeofday () in
+    
+    (* Play games in parallel *)
+    let pool = get_pool () in
+    let results = Task.run pool (fun () ->
+      Task.parallel_for_reduce pool ~start:0 ~finish:(num_games - 1)
+        ~body:(fun game_idx ->
+          let rng = Random.State.make [|42 + game_idx * 13 + budget|] in
+          let board = ref 0x0000000000000000L in
+          let score = ref 0 in
+          
+          (* Add initial tiles *)
+          board := add_random_tile !board rng;
+          board := add_random_tile !board rng;
+          
+          (* Play game with node limit *)
+          let moves = ref 0 in
+          while not (is_game_over !board) && !moves < 1000000 do
+            match get_best_move_limited !board simple_fast budget with
+            | None -> moves := 1000000  (* Force exit *)
+            | Some (dir, _) ->
+              let new_board = match dir with
+                | `Up -> move_up !board
+                | `Down -> move_down !board
+                | `Left -> move_left !board
+                | `Right -> move_right !board
+              in
+              
+              let move_score = get_score_for_move !board dir in
+              score := !score + move_score;
+              board := new_board;
+              board := add_random_tile !board rng;
+              incr moves
+          done;
+          
+          [(!score, get_max_tile !board)]
+        )
+        (fun acc lst -> acc @ lst)
+        []
+    ) in
+    
+    let elapsed = Unix.gettimeofday () -. start_time in
+    let games_per_sec = float_of_int num_games /. elapsed in
+    
+    (* Calculate statistics *)
+    let scores = List.map fst results in
+    let tiles = List.map snd results in
+    
+    let avg_score = float_of_int (List.fold_left (+) 0 scores) /. float_of_int num_games in
+    let max_score = List.fold_left max 0 scores in
+    let min_score = List.fold_left min max_int scores in
+    let avg_tile = float_of_int (List.fold_left (+) 0 tiles) /. float_of_int num_games in
+    let max_tile = List.fold_left max 0 tiles in
+    
+    (* Standard deviation *)
+    let variance = List.fold_left (fun acc s ->
+      let diff = float_of_int s -. avg_score in
+      acc +. (diff *. diff)
+    ) 0.0 scores /. float_of_int num_games in
+    let std_dev = sqrt variance in
+    
+    Printf.printf "%6d | %9.0f | %7.0f | %9d | %9d | %8.0f | %8d | %9.1f\n"
+      budget avg_score std_dev max_score min_score avg_tile max_tile games_per_sec;
+    flush stdout
+  ) budgets;
+  
+  Printf.printf "\nExperiment completed!\n"
+
+(* Cleanup function *)
+let cleanup () =
+  match !pool with
+  | Some p -> Task.teardown_pool p
+  | None -> ()
+
+(* Main *)
+let () =
+  init_tables ();
+  
+  let args = Sys.argv in
+  let num_games = ref 50 in
+  
+  if Array.length args > 1 then begin
+    try
+      num_domains := int_of_string args.(1);
+      Printf.printf "Using %d cores for parallel evaluation\n" !num_domains
+    with _ ->
+      Printf.printf "Invalid number of cores, using default %d\n" !num_domains
+  end;
+  
+  if Array.length args > 2 then begin
+    try
+      num_games := int_of_string args.(2);
+      Printf.printf "Playing %d games per configuration\n" !num_games
+    with _ ->
+      Printf.printf "Invalid number of games, using default %d\n" !num_games
+  end;
+  
+  test_simple_fast_budgets ~num_games:!num_games;
+  
+  (* Cleanup domain pool *)
+  cleanup ()
