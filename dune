@@ -12,7 +12,7 @@
 (executable
  (name inference_cli)
  (modules inference_cli)
- (libraries gp_2048_lib unix))
+ (libraries gp_2048_lib unix str))
 
 (executable
  (name train_models)
@@ -28,3 +28,8 @@
  (name beat_simple_fast)
  (modules beat_simple_fast)
  (libraries gp_2048_lib unix domainslib))
+
+(executable
+ (name test_num_empty_cells)
+ (modules test_num_empty_cells)
+ (libraries gp_2048_lib unix))

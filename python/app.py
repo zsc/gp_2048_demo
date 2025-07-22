@@ -417,7 +417,7 @@ def handle_complete_game(data):
     try:
         model_name = data.get('model', '')
         seed = data.get('seed', random.randint(1, 100000))
-        node_budget = data.get('node_budget', 500)  # Default to 500 if not specified
+        search_mode = data.get('search_mode', 'node_budget')
         
         # Build command
         cmd = [OCAML_INFERENCE_PATH, '--play-game']
@@ -426,27 +426,41 @@ def handle_complete_game(data):
             if os.path.exists(model_path):
                 cmd.append(model_path)
         cmd.append(str(seed))
-        cmd.append(str(node_budget))
+        
+        # Add search mode specific parameters
+        if search_mode == 'node_budget':
+            node_budget = data.get('node_budget', 500)
+            cmd.extend(['--node-budget', str(node_budget)])
+        else:  # fixed_depth
+            search_depth = data.get('search_depth', 2)
+            cmd.extend(['--search-depth', str(search_depth)])
         
         # Call OCaml to play complete game
         result = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
-            timeout=10.0
+            timeout=100.0
         )
         
         if result.returncode == 0:
             game_data = json.loads(result.stdout)
-            emit('complete_game_result', {
+            result_data = {
                 'success': True,
                 'trace': game_data['trace'],
                 'final_score': game_data['final_score'],
                 'max_tile': game_data['max_tile'],
                 'total_moves': game_data['total_moves'],
-                'time_ms': game_data['time_ms'],
-                'node_budget': game_data['node_budget']
-            })
+                'time_ms': game_data['time_ms']
+            }
+            
+            # Include search mode specific info
+            if search_mode == 'node_budget':
+                result_data['node_budget'] = game_data.get('node_budget', node_budget)
+            else:
+                result_data['search_depth'] = game_data.get('search_depth', search_depth)
+            
+            emit('complete_game_result', result_data)
         else:
             emit('complete_game_result', {
                 'success': False,

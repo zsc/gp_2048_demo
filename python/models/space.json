@@ -1,0 +1,7 @@
+{
+  "nodes": ["NumEmptyCells"],
+  "node_budget_max": 500,
+  "fitness": 5057.00,
+  "avg_score": 5057.00,
+  "avg_max_tile": 432.00
+}

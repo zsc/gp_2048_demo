@@ -51,6 +51,13 @@
                         <button id="refresh-models-btn" style="margin-top: 5px;">Refresh List</button>
                     </div>
                     <div class="form-group">
+                        <label for="search-mode">Search Mode:</label>
+                        <select id="search-mode-selector">
+                            <option value="node_budget">Node Budget</option>
+                            <option value="fixed_depth">Fixed Depth</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="node-budget-group">
                         <label for="node-budget">Node Budget:</label>
                         <select id="node-budget-selector">
                             <option value="100">100 (Fastest)</option>
@@ -58,6 +65,16 @@
                             <option value="1000">1000 (Balanced)</option>
                             <option value="1500">1500 (Best Performance)</option>
                             <option value="2000">2000 (Slow)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="search-depth-group" style="display: none;">
+                        <label for="search-depth">Search Depth:</label>
+                        <select id="search-depth-selector">
+                            <option value="1">1 (Fastest)</option>
+                            <option value="2" selected>2 (Balanced)</option>
+                            <option value="3">3 (Good)</option>
+                            <option value="4">4 (Slow)</option>
+                            <option value="5">5 (Very Slow)</option>
                         </select>
                     </div>
                     <button id="new-game-btn">New Game</button>
@@ -92,7 +109,11 @@
             const aiPlayBtn = document.getElementById('ai-play-btn');
             const aiStopBtn = document.getElementById('ai-stop-btn');
             const boardContainer = document.getElementById('board-container');
+            const searchModeSelector = document.getElementById('search-mode-selector');
             const nodeBudgetSelector = document.getElementById('node-budget-selector');
+            const searchDepthSelector = document.getElementById('search-depth-selector');
+            const nodeBudgetGroup = document.getElementById('node-budget-group');
+            const searchDepthGroup = document.getElementById('search-depth-group');
             const gameScoreEl = document.getElementById('game-score');
             const gameMaxTileEl = document.getElementById('game-max-tile');
             const playbackSpeedSlider = document.getElementById('playback-speed');
@@ -161,7 +182,9 @@
                     newGameBtn.disabled = true;
                     modelSelector.disabled = true;
                     refreshModelsBtn.disabled = true;
+                    searchModeSelector.disabled = true;
                     nodeBudgetSelector.disabled = true;
+                    searchDepthSelector.disabled = true;
                 } else {
                     aiPlayBtn.disabled = isGameOver || !modelSelected;
                     aiStopBtn.disabled = true;
@@ -169,7 +192,9 @@
                     newGameBtn.disabled = false;
                     modelSelector.disabled = false;
                     refreshModelsBtn.disabled = false;
+                    searchModeSelector.disabled = false;
                     nodeBudgetSelector.disabled = false;
+                    searchDepthSelector.disabled = false;
                 }
             }
 
@@ -197,11 +222,20 @@
                     updateButtonStates();
                     
                     // Request complete game from OCaml
-                    socket.emit('request_complete_game', {
+                    const searchMode = searchModeSelector.value;
+                    const requestData = {
                         model: modelSelector.value,
                         seed: Math.floor(Math.random() * 100000),
-                        node_budget: parseInt(nodeBudgetSelector.value)
-                    });
+                        search_mode: searchMode
+                    };
+                    
+                    if (searchMode === 'node_budget') {
+                        requestData.node_budget = parseInt(nodeBudgetSelector.value);
+                    } else {
+                        requestData.search_depth = parseInt(searchDepthSelector.value);
+                    }
+                    
+                    socket.emit('request_complete_game', requestData);
                     
                     // Show loading message
                     const inferenceTimeEl = document.getElementById('inference-time');
@@ -232,6 +266,18 @@
             });
             
             refreshModelsBtn.addEventListener('click', fetchModels);
+            
+            // Handle search mode switching
+            searchModeSelector.addEventListener('change', () => {
+                const mode = searchModeSelector.value;
+                if (mode === 'node_budget') {
+                    nodeBudgetGroup.style.display = 'block';
+                    searchDepthGroup.style.display = 'none';
+                } else {
+                    nodeBudgetGroup.style.display = 'none';
+                    searchDepthGroup.style.display = 'block';
+                }
+            });
             
             // Handle playback speed control
             playbackSpeedSlider.addEventListener('input', (e) => {
